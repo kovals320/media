@@ -1,33 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Photo } from "@/lib/immich";
 import { useOverlay } from "@/lib/useOverlay";
 
 const STEP = 240; // photos rendered per scroll step
-const monthName = new Intl.DateTimeFormat("he-IL", { month: "long", timeZone: "UTC" });
-
-type Section = { key: string; label: string; items: { photo: Photo; index: number }[] };
-
-function byMonth(photos: Photo[], year: string): Section[] {
-  const sections: Section[] = [];
-  photos.forEach((photo, index) => {
-    const d = photo.t ? new Date(photo.t) : null;
-    const valid = d !== null && !Number.isNaN(d.getTime());
-    const key = valid ? `${d.getUTCFullYear()}-${d.getUTCMonth()}` : "unknown";
-    // A photo taken in another year (e.g. December of the year before) says so.
-    const label = !valid
-      ? "בלי תאריך"
-      : String(d.getUTCFullYear()) === year
-        ? monthName.format(d)
-        : `${monthName.format(d)} ${d.getUTCFullYear()}`;
-    const last = sections[sections.length - 1];
-    if (last && last.key === key) last.items.push({ photo, index });
-    else sections.push({ key, label, items: [{ photo, index }] });
-  });
-  return sections;
-}
-
 export function YearView({
   year,
   photos,
@@ -41,7 +18,6 @@ export function YearView({
   const [viewing, setViewing] = useState<number | null>(null);
   const { markOpened, close } = useOverlay(viewing !== null, () => setViewing(null));
   const sentinel = useRef<HTMLDivElement>(null);
-  const sections = useMemo(() => byMonth(photos.slice(0, shown), year), [photos, shown, year]);
 
   // Render more photos as the visitor scrolls down.
   useEffect(() => {
@@ -73,32 +49,28 @@ export function YearView({
 
   return (
     <>
-      {sections.map((s, si) => (
-        <section key={`${s.key}-${si}`} className="mt-8" aria-label={s.label}>
-          <h2 className="mb-3 font-display text-2xl">{s.label}</h2>
-          <ul className="grid grid-cols-3 gap-1 sm:grid-cols-4 sm:gap-1.5 lg:grid-cols-6">
-            {s.items.map(({ photo, index }) => (
-              <li key={photo.id}>
-                <button
-                  type="button"
-                  onClick={() => open(index)}
-                  aria-label={`תמונה ${index + 1}`}
-                  className="block aspect-square w-full overflow-hidden rounded-md bg-sun/20 sm:rounded-lg"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/api/photo/${photo.id}/thumb`}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.04]"
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      {/* One continuous grid, newest photo first. */}
+      <ul className="mt-8 grid grid-cols-3 gap-1 sm:grid-cols-4 sm:gap-1.5 lg:grid-cols-6">
+        {photos.slice(0, shown).map((photo, index) => (
+          <li key={photo.id}>
+            <button
+              type="button"
+              onClick={() => open(index)}
+              aria-label={`תמונה ${index + 1}`}
+              className="block aspect-square w-full overflow-hidden rounded-md bg-sun/20 sm:rounded-lg"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/photo/${photo.id}/thumb`}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover transition-transform duration-300 hover:scale-[1.04]"
+              />
+            </button>
+          </li>
+        ))}
+      </ul>
       {shown < photos.length && <div ref={sentinel} className="h-24" aria-hidden />}
 
       {viewing !== null && photos[viewing] && (
