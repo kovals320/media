@@ -103,7 +103,7 @@ const getFolderPhotos = unstable_cache(
     return photos;
   },
   ["immich-folder-photos-v2"],
-  { revalidate: HOUR * 6, tags: [IMMICH_CACHE_TAG] },
+  { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
 async function getCatalog(): Promise<CatalogPhoto[]> {
