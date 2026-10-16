@@ -6,30 +6,6 @@ import { getPlaylistInfo, YOUTUBE_CACHE_TAG } from "@/lib/youtube";
 
 export type FormState = { error: string | null; ok: string | null };
 
-export async function addMember(_: FormState, formData: FormData): Promise<FormState> {
-  const { supabase } = await requireAdmin();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const name = String(formData.get("name") ?? "").trim() || null;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "האימייל לא תקין.", ok: null };
-
-  const { error } = await supabase.from("media_members").insert({ email, display_name: name, role: "admin" });
-  if (error) {
-    return {
-      error: error.code === "23505" ? "האימייל הזה כבר ברשימה." : "לא הצלחנו להוסיף. נסו שוב.",
-      ok: null,
-    };
-  }
-  revalidatePath("/admin");
-  return { error: null, ok: `${email} נוסף/ה כמנהל/ת.` };
-}
-
-export async function removeMember(email: string) {
-  const { supabase, member } = await requireAdmin();
-  if (email === member.email) return;
-  await supabase.from("media_members").delete().eq("email", email);
-  revalidatePath("/admin");
-}
-
 function playlistIdFrom(input: string) {
   const trimmed = input.trim();
   try {

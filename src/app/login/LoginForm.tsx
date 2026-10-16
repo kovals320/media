@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Mode = "signin" | "signup" | "reset";
+type Mode = "signin" | "reset";
 
 const inputClass =
   "w-full rounded-2xl border-2 border-ink/10 bg-white px-4 py-3 text-lg outline-none transition-colors focus:border-lake";
@@ -40,30 +40,6 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
       return;
     }
 
-    if (mode === "signup") {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${origin}/auth/callback` },
-      });
-      setBusy(false);
-      if (error) {
-        setError(
-          error.message.toLowerCase().includes("password")
-            ? "הסיסמה צריכה להיות באורך 6 תווים לפחות."
-            : "לא הצלחנו ליצור חשבון. בדקו את האימייל ונסו שוב.",
-        );
-        return;
-      }
-      if (data.session) {
-        router.replace("/");
-        router.refresh();
-        return;
-      }
-      setNotice("שלחנו אליכם אימייל לאישור החשבון. לחצו על הקישור שבו ואז היכנסו.");
-      return;
-    }
-
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${origin}/auth/callback?next=/reset-password`,
     });
@@ -75,8 +51,7 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
     setNotice("אם האימייל רשום, נשלח אליו קישור לבחירת סיסמה חדשה.");
   }
 
-  const submitLabel =
-    mode === "signin" ? "כניסה" : mode === "signup" ? "יצירת חשבון" : "שליחת קישור";
+  const submitLabel = mode === "signin" ? "כניסה" : "שליחת קישור";
 
   return (
     <form onSubmit={submit} className="mt-8 flex flex-col gap-4">
@@ -99,7 +74,7 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
           <input
             type="password"
             dir="ltr"
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            autoComplete="current-password"
             required
             minLength={6}
             value={password}
@@ -123,12 +98,7 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
       <div className="mt-2 flex flex-col items-start gap-2 text-muted">
         {mode !== "signin" && (
           <button type="button" onClick={() => setMode("signin")} className="underline-offset-4 hover:text-ink hover:underline">
-            יש לי חשבון, לכניסה
-          </button>
-        )}
-        {mode !== "signup" && (
-          <button type="button" onClick={() => setMode("signup")} className="underline-offset-4 hover:text-ink hover:underline">
-            מנהל חדש? יצירת חשבון
+            חזרה לכניסה
           </button>
         )}
         {mode !== "reset" && (
