@@ -39,11 +39,7 @@ async function checkYouTube() {
     }
     const playlist = data.items?.[0];
     if (!playlist) return { status: "connected, but test playlist not found" };
-    return {
-      status: "connected",
-      testPlaylist: playlist.snippet?.title,
-      videos: playlist.contentDetails?.itemCount,
-    };
+    return { status: "connected" };
   } catch {
     return { status: "unreachable" };
   }

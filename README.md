@@ -2,15 +2,24 @@
 
 Family photos and videos app, served at https://media.dorh.fyi
 
-Stack: Next.js (App Router, TypeScript, Tailwind) on Vercel, Supabase for data, auth and storage.
+Stack: Next.js (App Router, TypeScript, Tailwind) on Vercel, Supabase for login, data and photo storage, YouTube for videos.
 
-```bash
-npm install
-npm run dev
-```
+## How it works
+
+- **Sign-in:** Supabase email + password. Only emails in `media_members` get in; admins manage that list at `/admin`.
+- **Videos:** playlists listed in `media_playlists`, read live from the YouTube Data API (cached 30 min). Sorted by the year in each title, newest first; titles without a year come first.
+- **Photos:** albums in `media_albums`, photos in `media_photos`. Files live in the private `media-photos` bucket. Photos are resized in the browser before upload (2560px full copy + 640px thumbnail) and shown through signed links.
 
 ## Supabase
 
-Shared Supabase project `home`. All tables for this app use the `media_` prefix.
-Copy `.env.example` to `.env.local` and fill in the values for local development.
-Connection check: `/api/health`.
+Shared project `home`. Every table, function and bucket for this app uses the `media_` / `media-` prefix.
+
+## Environment variables
+
+| Name | Where |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Vercel (Config) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Vercel (Config) |
+| `YOUTUBE_API_KEY` | Vercel (Secret) |
+
+Copy `.env.example` to `.env.local` for local development. Connection check: `/api/health`.

@@ -1,14 +1,32 @@
 import Link from "next/link";
+import { requireMember } from "@/lib/auth";
+import { signOut } from "@/app/actions";
 
-export default function Home() {
+export default async function Home() {
+  const { member } = await requireMember();
+  const name = member.display_name;
+
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 pb-8 pt-10 sm:px-8 sm:pt-16">
-      <header className="mb-8 sm:mb-12">
-        <p className="text-lg text-muted">המדיה של המשפחה</p>
-        <h1 className="font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
-          מה רוצים לראות?
-        </h1>
-      </header>
+    <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 pb-8 pt-6 sm:px-8 sm:pt-10">
+      <div className="mb-6 flex items-center justify-between gap-3 sm:mb-8">
+        <p className="text-lg text-muted">{name ? `שלום, ${name}` : "המדיה של המשפחה"}</p>
+        <div className="flex items-center gap-1">
+          {member.role === "admin" && (
+            <Link href="/admin" className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink">
+              ניהול
+            </Link>
+          )}
+          <form action={signOut}>
+            <button className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink">
+              יציאה
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <h1 className="mb-8 font-display text-[2.6rem] leading-[1.05] sm:mb-12 sm:text-6xl">
+        מה רוצים לראות?
+      </h1>
 
       <nav
         aria-label="בחירת סוג מדיה"
@@ -41,7 +59,6 @@ export default function Home() {
           href="/videos"
           className="group relative flex min-h-[18rem] flex-col justify-end overflow-hidden rounded-[2rem] bg-lake p-6 text-white transition-transform duration-200 active:scale-[0.98] sm:min-h-[26rem] sm:p-8"
         >
-          {/* film perforations */}
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 flex h-7 items-center justify-around bg-lake-deep px-3">
             {Array.from({ length: 12 }).map((_, i) => (
               <span key={i} className="h-3 w-4 rounded-[3px] bg-paper/85" />

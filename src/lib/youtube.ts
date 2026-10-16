@@ -99,3 +99,18 @@ export async function getPlaylistVideos(playlistId: string): Promise<Video[]> {
 
   return videos;
 }
+
+type PlaylistsResponse = {
+  items?: { snippet?: { title?: string }; contentDetails?: { itemCount?: number } }[];
+};
+
+/** Title and size of a playlist, or null if it can't be read (e.g. private). */
+export async function getPlaylistInfo(playlistId: string) {
+  const qs = new URLSearchParams({ part: "snippet,contentDetails", id: playlistId, key: apiKey() });
+  const res = await fetch(`${API}/playlists?${qs}`, { cache: "no-store" });
+  if (!res.ok) return null;
+  const data = (await res.json()) as PlaylistsResponse;
+  const item = data.items?.[0];
+  if (!item?.snippet?.title) return null;
+  return { title: item.snippet.title, count: item.contentDetails?.itemCount ?? 0 };
+}
