@@ -144,8 +144,8 @@ export async function getYearPhotos(year: string): Promise<Photo[] | null> {
   const catalog = await getCatalog();
   const photos = catalog.filter((p) => photoYear(p) === year);
   if (photos.length === 0) return null;
-  // Oldest first within the year, like flipping through an album.
-  photos.sort((a, b) => (a.t ?? "").localeCompare(b.t ?? ""));
+  // Newest first within the year.
+  photos.sort((a, b) => (b.t ?? "").localeCompare(a.t ?? ""));
   return photos.map(strip);
 }
 
