@@ -1,41 +1,33 @@
+import type { Metadata } from "next";
 import { BackLink } from "@/components/BackLink";
-import { getViewer } from "@/lib/auth";
-import { sortByTitleYear } from "@/lib/sort";
-import { getPlaylistVideos, type Video } from "@/lib/youtube";
+import { loadVideos } from "./loadVideos";
 import { VideoBrowser } from "./VideoBrowser";
 
-export const metadata = { title: "סרטונים – המדיה של המשפחה" };
+type Props = { searchParams: Promise<{ v?: string }> };
 
-export default async function VideosPage() {
-  const { supabase } = await getViewer();
-  const { data, error } = await supabase
-    .from("media_playlists")
-    .select("youtube_playlist_id")
-    .order("sort_order");
-  if (error) throw new Error(error.message);
+// A shared link (/videos?v=ID) shows that video's title and picture in WhatsApp etc.
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { v } = await searchParams;
+  const base: Metadata = { title: "סרטונים – המדיה של המשפחה" };
+  if (!v) return base;
+  const { videos } = await loadVideos();
+  const video = videos.find((x) => x.id === v);
+  if (!video) return base;
+  return {
+    title: `${video.title} – המדיה של המשפחה`,
+    openGraph: {
+      title: video.title,
+      description: "סרטון מהמדיה של המשפחה",
+      images: [{ url: video.thumbnail }],
+      type: "video.other",
+    },
+  };
+}
 
-  // Playlists are only sources: all their videos go into one list.
-  const results = await Promise.all(
-    ((data ?? []) as { youtube_playlist_id: string }[]).map(async (p) => {
-      try {
-        return { videos: await getPlaylistVideos(p.youtube_playlist_id), failed: false };
-      } catch {
-        return { videos: [] as Video[], failed: true };
-      }
-    }),
-  );
-
-  const seen = new Set<string>();
-  const all: Video[] = [];
-  for (const r of results) {
-    for (const v of r.videos) {
-      if (seen.has(v.id)) continue; // same video in two playlists
-      seen.add(v.id);
-      all.push(v);
-    }
-  }
-  const videos = sortByTitleYear(all, (v) => v.title, (v) => v.publishedAt);
-  const someFailed = results.some((r) => r.failed);
+export default async function VideosPage({ searchParams }: Props) {
+  const { v } = await searchParams;
+  const { videos, someFailed } = await loadVideos();
+  const initialIndex = v ? videos.findIndex((x) => x.id === v) : -1;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-5 pb-12 pt-6 sm:px-8 sm:pt-10">
@@ -56,7 +48,7 @@ export default async function VideosPage() {
           עוד אין כאן סרטונים.
         </p>
       ) : (
-        <VideoBrowser videos={videos} />
+        <VideoBrowser videos={videos} initialIndex={initialIndex >= 0 ? initialIndex : null} />
       )}
     </main>
   );

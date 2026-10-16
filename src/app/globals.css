@@ -44,3 +44,6 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .print-left, .print-right { animation-duration: 1ms; animation-delay: 0ms; }
 }
+
+/* A phone turned sideways: players drop their bars and fill the screen. */
+@custom-variant phone-landscape (@media (orientation: landscape) and (max-height: 540px));

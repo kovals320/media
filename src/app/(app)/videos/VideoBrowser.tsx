@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { yearInTitle } from "@/lib/sort";
 import type { Video } from "@/lib/youtube";
 import { useOverlay } from "@/lib/useOverlay";
@@ -20,10 +20,18 @@ function groupByYear(videos: Video[]): Group[] {
   return groups;
 }
 
-export function VideoBrowser({ videos }: { videos: Video[] }) {
+export function VideoBrowser({ videos, initialIndex }: { videos: Video[]; initialIndex: number | null }) {
   const [current, setCurrent] = useState<number | null>(null);
   const { markOpened, close } = useOverlay(current !== null, () => setCurrent(null));
   const groups = groupByYear(videos);
+
+  // Opened from a shared link (/videos?v=ID): start playing that video.
+  useEffect(() => {
+    if (initialIndex === null) return;
+    window.history.replaceState(null, "", "/videos");
+    markOpened();
+    setCurrent(initialIndex);
+  }, [initialIndex, markOpened]);
 
   function open(index: number) {
     markOpened();
@@ -100,26 +108,41 @@ function Player({
         if (e.key === "ArrowRight" && hasPrev) onIndex(index - 1);
       }}
     >
-      <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 sm:px-8 sm:pt-6">
+      <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 phone-landscape:hidden sm:px-8 sm:pt-6">
         <div className="min-w-0">
           {year !== null && <p className="text-white/60">{year}</p>}
           <h2 className="font-display text-xl leading-snug sm:text-2xl">{video.title}</h2>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          autoFocus
-          aria-label="סגירה"
-          className="shrink-0 rounded-full bg-white/10 p-2.5 transition-colors hover:bg-white/20"
-        >
-          <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6 fill-none stroke-current stroke-2">
-            <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-          </svg>
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <ShareButton video={video} />
+          <button
+            type="button"
+            onClick={onClose}
+            autoFocus
+            aria-label="סגירה"
+            className="rounded-full bg-white/10 p-2.5 transition-colors hover:bg-white/20"
+          >
+            <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6 fill-none stroke-current stroke-2">
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-1 items-center justify-center px-0 sm:px-8">
-        <div className="aspect-video w-full max-w-[min(100%,calc((100dvh-11rem)*16/9))] overflow-hidden bg-black sm:rounded-2xl">
+      {/* Sideways phone: only the video, plus a small close button. */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="סגירה"
+        className="absolute left-3 top-3 z-10 hidden rounded-full bg-black/40 p-2 text-white/80 phone-landscape:block"
+      >
+        <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-2">
+          <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+        </svg>
+      </button>
+
+      <div className="flex flex-1 items-center justify-center px-0 phone-landscape:px-0 sm:px-8">
+        <div className="aspect-video w-full max-w-[min(100%,calc((100dvh-11rem)*16/9))] overflow-hidden bg-black phone-landscape:h-dvh phone-landscape:w-auto phone-landscape:max-w-full phone-landscape:rounded-none sm:rounded-2xl">
           <iframe
             key={video.id}
             src={`https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0&playsinline=1&modestbranding=1`}
@@ -131,7 +154,7 @@ function Player({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:pb-6">
+      <div className="flex items-center justify-between gap-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 phone-landscape:hidden sm:px-8 sm:pb-6">
         <button
           type="button"
           disabled={!hasPrev}
@@ -159,5 +182,42 @@ function Player({
         </button>
       </div>
     </div>
+  );
+}
+
+function ShareButton({ video }: { video: Video }) {
+  const [copied, setCopied] = useState(false);
+
+  async function share() {
+    const url = `${window.location.origin}/videos?v=${video.id}`;
+    // Phones: the system share sheet (WhatsApp etc.). Computers: copy the link.
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: video.title, url });
+      } catch {
+        // closed the share sheet
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("העתיקו את הקישור:", url);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className="flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-2.5 transition-colors hover:bg-white/20"
+    >
+      <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-2">
+        <path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {copied ? "הקישור הועתק" : "שיתוף"}
+    </button>
   );
 }

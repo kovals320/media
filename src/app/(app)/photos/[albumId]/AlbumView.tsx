@@ -297,7 +297,17 @@ function Viewer({
         if (dx < -50) prev();
       }}
     >
-      <div className="flex items-center justify-between gap-3 px-4 pt-4 sm:px-8 sm:pt-6">
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="סגירה"
+        className="absolute left-3 top-3 z-10 hidden rounded-full bg-black/40 p-2 text-white/80 phone-landscape:block"
+      >
+        <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-2">
+          <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+        </svg>
+      </button>
+      <div className="flex items-center justify-between gap-3 px-4 pt-4 phone-landscape:hidden sm:px-8 sm:pt-6">
         <span className="text-white/70">
           {index + 1} מתוך {photos.length}
         </span>
@@ -342,7 +352,7 @@ function Viewer({
       </div>
       {error && <p className="mx-4 mt-3 rounded-xl bg-red-500/20 px-4 py-2 sm:mx-8">{error}</p>}
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center p-2 sm:p-6">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center p-2 phone-landscape:p-0 sm:p-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           key={photo.id}
@@ -376,7 +386,7 @@ function Viewer({
           </button>
         )}
       </div>
-      <p className="pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm text-white/50 sm:hidden">
+      <p className="pb-[max(1rem,env(safe-area-inset-bottom))] text-center text-sm text-white/50 phone-landscape:hidden sm:hidden">
         החליקו הצידה למעבר בין תמונות
       </p>
     </div>
