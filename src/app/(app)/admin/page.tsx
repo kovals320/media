@@ -49,7 +49,7 @@ export default async function AdminPage() {
 
       <section className="mt-12" aria-labelledby="playlists-h">
         <h2 id="playlists-h" className="font-display text-2xl sm:text-3xl">פלייליסטים ביוטיוב</h2>
-        <p className="mt-1 text-muted">הסרטונים בכל פלייליסט מסודרים לפי השנה שבכותרת. סרטונים בלי שנה מופיעים ראשונים.</p>
+        <p className="mt-1 text-muted">הפלייליסטים הם רק מקור: כל הסרטונים מכולם מוצגים יחד, לפי השנה שבכותרת. סרטונים בלי שנה מופיעים ראשונים.</p>
         <ul className="mt-4 divide-y divide-ink/10 rounded-2xl bg-white">
           {((playlists ?? []) as PlaylistRow[]).map((p) => (
             <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">

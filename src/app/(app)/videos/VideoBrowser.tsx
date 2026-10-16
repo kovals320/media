@@ -1,99 +1,92 @@
 "use client";
 
 import { useState } from "react";
+import { yearInTitle } from "@/lib/sort";
 import type { Video } from "@/lib/youtube";
 import { useOverlay } from "@/lib/useOverlay";
 
-export type PlaylistView = {
-  id: string;
-  title: string;
-  failed: boolean;
-  videos: Video[];
-};
+type Group = { label: string; items: { video: Video; index: number }[] };
 
-type Position = { list: number; index: number };
+// Videos arrive already sorted; split them into year sections for display.
+function groupByYear(videos: Video[]): Group[] {
+  const groups: Group[] = [];
+  videos.forEach((video, index) => {
+    const year = yearInTitle(video.title);
+    const label = year === null ? "בלי שנה בכותרת" : String(year);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push({ video, index });
+    else groups.push({ label, items: [{ video, index }] });
+  });
+  return groups;
+}
 
-export function VideoBrowser({ playlists }: { playlists: PlaylistView[] }) {
-  const [current, setCurrent] = useState<Position | null>(null);
+export function VideoBrowser({ videos }: { videos: Video[] }) {
+  const [current, setCurrent] = useState<number | null>(null);
   const { markOpened, close } = useOverlay(current !== null, () => setCurrent(null));
+  const groups = groupByYear(videos);
 
-  function open(list: number, index: number) {
+  function open(index: number) {
     markOpened();
-    setCurrent({ list, index });
+    setCurrent(index);
   }
 
   return (
     <>
-      {playlists.map((p, list) => (
-        <section key={p.id} className="mt-10 sm:mt-12" aria-labelledby={`pl-${p.id}`}>
-          <div className="mb-3 flex items-baseline gap-3 px-5 sm:px-8">
-            <h2 id={`pl-${p.id}`} className="font-display text-2xl sm:text-3xl">{p.title}</h2>
-            {!p.failed && <span className="text-muted">{p.videos.length} סרטונים</span>}
-          </div>
-
-          {p.failed ? (
-            <p className="mx-5 rounded-2xl bg-lake/10 p-5 text-muted sm:mx-8">
-              לא הצלחנו לטעון את הפלייליסט מיוטיוב. נסו לרענן את הדף בעוד כמה דקות.
-            </p>
-          ) : (
-            <ul className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-5 px-5 pb-3 [scrollbar-width:thin] sm:scroll-px-8 sm:gap-4 sm:px-8">
-              {p.videos.map((v, index) => (
-                <li key={v.id} className="w-64 shrink-0 snap-start sm:w-72">
-                  <button
-                    type="button"
-                    onClick={() => open(list, index)}
-                    className="group block w-full rounded-2xl text-start"
-                  >
-                    <div className="relative aspect-video overflow-hidden rounded-2xl bg-lake/15">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={v.thumbnail}
-                        alt=""
-                        loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                      />
-                      {v.duration && (
-                        <span dir="ltr" className="absolute bottom-2 left-2 rounded-md bg-ink/80 px-1.5 py-0.5 text-sm font-semibold text-white">
-                          {v.duration}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-2 line-clamp-2 font-semibold leading-snug">{v.title}</p>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+      {groups.map((g) => (
+        <section key={g.label} className="mt-10 sm:mt-12" aria-label={g.label}>
+          <h2 className="mb-4 flex items-baseline gap-3">
+            <span className="font-display text-3xl sm:text-4xl">{g.label}</span>
+            <span className="text-muted">{g.items.length === 1 ? "סרטון אחד" : `${g.items.length} סרטונים`}</span>
+          </h2>
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">
+            {g.items.map(({ video: v, index }) => (
+              <li key={v.id}>
+                <button type="button" onClick={() => open(index)} className="group block w-full rounded-2xl text-start">
+                  <div className="relative aspect-video overflow-hidden rounded-xl bg-lake/15 sm:rounded-2xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={v.thumbnail}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                    {v.duration && (
+                      <span dir="ltr" className="absolute bottom-1.5 left-1.5 rounded-md bg-ink/80 px-1.5 py-0.5 text-xs font-semibold text-white sm:text-sm">
+                        {v.duration}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 line-clamp-2 font-semibold leading-snug">{v.title}</p>
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       ))}
 
-      {current && (
-        <Player
-          playlist={playlists[current.list]}
-          index={current.index}
-          onIndex={(index) => setCurrent({ list: current.list, index })}
-          onClose={close}
-        />
+      {current !== null && (
+        <Player videos={videos} index={current} onIndex={setCurrent} onClose={close} />
       )}
     </>
   );
 }
 
 function Player({
-  playlist,
+  videos,
   index,
   onIndex,
   onClose,
 }: {
-  playlist: PlaylistView;
+  videos: Video[];
   index: number;
   onIndex: (i: number) => void;
   onClose: () => void;
 }) {
-  const video = playlist.videos[index];
-  const total = playlist.videos.length;
+  const video = videos[index];
+  const total = videos.length;
   const hasPrev = index > 0;
   const hasNext = index < total - 1;
+  const year = yearInTitle(video.title);
 
   return (
     <div
@@ -109,7 +102,7 @@ function Player({
     >
       <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 sm:px-8 sm:pt-6">
         <div className="min-w-0">
-          <p className="text-white/60">{playlist.title}</p>
+          {year !== null && <p className="text-white/60">{year}</p>}
           <h2 className="font-display text-xl leading-snug sm:text-2xl">{video.title}</h2>
         </div>
         <button
