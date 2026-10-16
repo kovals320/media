@@ -1,1 +1,46 @@
 @import "tailwindcss";
+
+@theme {
+  --color-paper: #f6f7f2;
+  --color-ink: #1d2b36;
+  --color-muted: #66737e;
+  --color-sun: #f2c14e;
+  --color-sun-deep: #e0a526;
+  --color-lake: #2f5d8c;
+  --color-lake-deep: #234a72;
+  --color-print: #fffdf7;
+
+  --font-display: var(--font-secular), "Secular One", system-ui, sans-serif;
+  --font-sans: var(--font-assistant), "Assistant", system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-lake);
+  outline-offset: 3px;
+}
+
+/* Photo prints fan out once on load */
+@keyframes fan-left {
+  from { transform: rotate(0deg) translateX(0); }
+  to   { transform: rotate(-9deg) translateX(14px); }
+}
+@keyframes fan-right {
+  from { transform: rotate(0deg) translateX(0); }
+  to   { transform: rotate(7deg) translateX(-12px); }
+}
+.print-left  { animation: fan-left 700ms cubic-bezier(.2,.8,.2,1) 150ms both; }
+.print-right { animation: fan-right 700ms cubic-bezier(.2,.8,.2,1) 250ms both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .print-left, .print-right { animation-duration: 1ms; animation-delay: 0ms; }
+}
