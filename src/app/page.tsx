@@ -49,7 +49,7 @@ export default function Home() {
           </div>
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-14 flex justify-center sm:top-20">
             <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/12 ring-1 ring-white/30 transition-transform duration-300 group-hover:scale-105 sm:h-36 sm:w-36">
-              <svg viewBox="0 0 24 24" className="h-12 w-12 -scale-x-100 fill-white sm:h-14 sm:w-14">
+              <svg viewBox="0 0 24 24" className="h-12 w-12 translate-x-0.5 fill-white sm:h-14 sm:w-14">
                 <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" />
               </svg>
             </div>
