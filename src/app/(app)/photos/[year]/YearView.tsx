@@ -9,12 +9,18 @@ const monthName = new Intl.DateTimeFormat("he-IL", { month: "long", timeZone: "U
 
 type Section = { key: string; label: string; items: { photo: Photo; index: number }[] };
 
-function byMonth(photos: Photo[]): Section[] {
+function byMonth(photos: Photo[], year: string): Section[] {
   const sections: Section[] = [];
   photos.forEach((photo, index) => {
     const d = photo.t ? new Date(photo.t) : null;
-    const key = d && !Number.isNaN(d.getTime()) ? String(d.getUTCMonth()) : "unknown";
-    const label = key === "unknown" ? "בלי תאריך" : monthName.format(d!);
+    const valid = d !== null && !Number.isNaN(d.getTime());
+    const key = valid ? `${d.getUTCFullYear()}-${d.getUTCMonth()}` : "unknown";
+    // A photo taken in another year (e.g. December of the year before) says so.
+    const label = !valid
+      ? "בלי תאריך"
+      : String(d.getUTCFullYear()) === year
+        ? monthName.format(d)
+        : `${monthName.format(d)} ${d.getUTCFullYear()}`;
     const last = sections[sections.length - 1];
     if (last && last.key === key) last.items.push({ photo, index });
     else sections.push({ key, label, items: [{ photo, index }] });
@@ -35,7 +41,7 @@ export function YearView({
   const [viewing, setViewing] = useState<number | null>(null);
   const { markOpened, close } = useOverlay(viewing !== null, () => setViewing(null));
   const sentinel = useRef<HTMLDivElement>(null);
-  const sections = useMemo(() => byMonth(photos.slice(0, shown)), [photos, shown]);
+  const sections = useMemo(() => byMonth(photos.slice(0, shown), year), [photos, shown, year]);
 
   // Render more photos as the visitor scrolls down.
   useEffect(() => {
