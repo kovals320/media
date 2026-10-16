@@ -1,8 +1,10 @@
 import "server-only";
 
-// YouTube results are cached on Vercel for 30 minutes, so new videos
-// added to a playlist show up in the app within half an hour.
+// YouTube results are cached on Vercel for 30 minutes, so changes made on
+// YouTube show up in the app within half an hour. Admins can clear the
+// cache right away with the "refresh from YouTube" button (tag below).
 const REVALIDATE_SECONDS = 1800;
+export const YOUTUBE_CACHE_TAG = "youtube";
 const API = "https://www.googleapis.com/youtube/v3";
 
 export type Video = {
@@ -24,7 +26,7 @@ function apiKey() {
 async function yt<T>(path: string, params: Record<string, string>): Promise<T> {
   const qs = new URLSearchParams({ ...params, key: apiKey() });
   const res = await fetch(`${API}/${path}?${qs}`, {
-    next: { revalidate: REVALIDATE_SECONDS },
+    next: { revalidate: REVALIDATE_SECONDS, tags: [YOUTUBE_CACHE_TAG] },
   });
   if (!res.ok) throw new Error(`YouTube ${path} failed with ${res.status}`);
   return res.json() as Promise<T>;

@@ -1,6 +1,6 @@
 import { BackLink } from "@/components/BackLink";
 import { requireAdmin } from "@/lib/auth";
-import { AddMemberForm, AddPlaylistForm, RemoveButton } from "./Forms";
+import { AddMemberForm, AddPlaylistForm, RefreshYouTubeButton, RemoveButton } from "./Forms";
 import { removeMember, removePlaylist } from "./actions";
 
 export const metadata = { title: "ניהול – המדיה של המשפחה" };
@@ -69,6 +69,7 @@ export default async function AdminPage() {
           ))}
         </ul>
         <AddPlaylistForm />
+        <RefreshYouTubeButton />
       </section>
     </main>
   );

@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { getPlaylistInfo } from "@/lib/youtube";
+import { getPlaylistInfo, YOUTUBE_CACHE_TAG } from "@/lib/youtube";
 
 export type FormState = { error: string | null; ok: string | null };
 
@@ -78,4 +78,17 @@ export async function removePlaylist(id: string) {
   await supabase.from("media_playlists").delete().eq("id", id);
   revalidatePath("/admin");
   revalidatePath("/videos");
+}
+
+// Drop the saved YouTube data so the next visit reads fresh titles and videos.
+export async function refreshFromYouTube(_: FormState): Promise<FormState> {
+  await requireAdmin();
+  updateTag(YOUTUBE_CACHE_TAG);
+  revalidatePath("/videos");
+  const time = new Intl.DateTimeFormat("he-IL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jerusalem",
+  }).format(new Date());
+  return { error: null, ok: `עודכן ב-${time}. השינויים מיוטיוב כבר מופיעים באפליקציה.` };
 }
