@@ -1,5 +1,6 @@
 import { BackLink } from "@/components/BackLink";
 import { requireAdmin } from "@/lib/auth";
+import { getFolderMismatches, type FolderMismatch } from "@/lib/immich";
 import { AddPlaylistForm, RefreshYouTubeButton, RemoveButton } from "./Forms";
 import { removePlaylist } from "./actions";
 
@@ -43,6 +44,68 @@ export default async function AdminPage() {
         <AddPlaylistForm />
         <RefreshYouTubeButton />
       </section>
+      <PhotoDatesReport />
     </main>
+  );
+}
+
+const dateFormat = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+async function PhotoDatesReport() {
+  let folders: FolderMismatch[] | null = null;
+  try {
+    folders = await getFolderMismatches();
+  } catch {
+    folders = null;
+  }
+  const total = folders?.reduce((n, f) => n + f.photos.length, 0) ?? 0;
+
+  return (
+    <section className="mt-12" aria-labelledby="dates-h">
+      <h2 id="dates-h" className="font-display text-2xl sm:text-3xl">תמונות בתיקייה של שנה אחרת</h2>
+      <p className="mt-1 text-muted">
+        באפליקציה כל תמונה מופיעה בשנה שבה צולמה, לפי התאריך שבקובץ. כאן מופיעות התמונות ששמורות בשרת בתיקייה של
+        שנה אחרת, למקרה שתרצו להעביר אותן לתיקייה הנכונה. זה לא חובה: באפליקציה הן כבר מופיעות במקום הנכון.
+      </p>
+
+      {folders === null ? (
+        <p className="mt-4 rounded-2xl bg-red-50 p-4 text-red-800">שרת התמונות לא זמין כרגע.</p>
+      ) : total === 0 ? (
+        <p className="mt-4 rounded-2xl bg-lake/10 p-4 text-lake-deep">כל התמונות נמצאות בתיקייה של השנה שבה צולמו.</p>
+      ) : (
+        <>
+          <p className="mt-4 font-semibold">
+            {total.toLocaleString("he-IL")} תמונות ב-{folders.length} תיקיות
+          </p>
+          <div className="mt-3 flex flex-col gap-3">
+            {folders.map((f) => (
+              <details key={f.folder} className="group rounded-2xl bg-white">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+                  <span className="font-semibold">תיקיית {f.folder}</span>
+                  <span className="text-muted">
+                    {f.photos.length} מתוך {f.total.toLocaleString("he-IL")}
+                    <span aria-hidden className="ms-2 inline-block transition-transform group-open:rotate-90">‹</span>
+                  </span>
+                </summary>
+                <ul className="grid grid-cols-1 gap-2 px-4 pb-4 sm:grid-cols-2">
+                  {f.photos.map((p) => (
+                    <li key={p.id} className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/api/photo/${p.id}/thumb`} alt="" loading="lazy" className="h-14 w-14 shrink-0 rounded-lg bg-sun/20 object-cover" />
+                      <div className="min-w-0">
+                        <p dir="ltr" className="truncate text-end text-sm font-semibold">{p.file}</p>
+                        <p className="text-sm text-muted">
+                          צולמה {p.taken ? dateFormat.format(new Date(p.taken)) : "בתאריך לא ידוע"} · מופיעה ב-{p.year}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
