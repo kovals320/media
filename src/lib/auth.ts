@@ -10,38 +10,35 @@ export type Member = {
   role: "admin" | "member";
 };
 
-export type Session = {
+export type Viewer = {
   supabase: SupabaseClient;
   user: User | null;
   member: Member | null;
+  isAdmin: boolean;
 };
 
-// One lookup per request, shared by layouts, pages and actions.
-export const getSession = cache(async (): Promise<Session> => {
+// The app is public and read-only. Signing in only matters for admins,
+// who can add and change photos, albums and playlists.
+export const getViewer = cache(async (): Promise<Viewer> => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { supabase, user: null, member: null };
+  if (!user) return { supabase, user: null, member: null, isAdmin: false };
 
   const { data } = await supabase
     .from("media_members")
     .select("email, display_name, role")
     .eq("email", (user.email ?? "").toLowerCase())
     .maybeSingle();
+  const member = (data as Member | null) ?? null;
 
-  return { supabase, user, member: (data as Member | null) ?? null };
+  return { supabase, user, member, isAdmin: member?.role === "admin" };
 });
 
-export async function requireMember() {
-  const session = await getSession();
-  if (!session.user) redirect("/login");
-  if (!session.member) redirect("/no-access");
-  return session as { supabase: SupabaseClient; user: User; member: Member };
-}
-
 export async function requireAdmin() {
-  const session = await requireMember();
-  if (session.member.role !== "admin") redirect("/");
-  return session;
+  const viewer = await getViewer();
+  if (!viewer.user) redirect("/login");
+  if (!viewer.isAdmin || !viewer.member) redirect("/");
+  return viewer as Viewer & { user: User; member: Member };
 }

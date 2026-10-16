@@ -19,10 +19,6 @@ export function AddMemberForm() {
     <form action={action} className="mt-4 flex flex-wrap gap-2">
       <input name="email" type="email" dir="ltr" required placeholder="email@example.com" className={`${inputClass} flex-[2_1_14rem]`} />
       <input name="name" placeholder="שם (לא חובה)" className={`${inputClass} flex-[1_1_9rem]`} />
-      <select name="role" defaultValue="member" className={`${inputClass} flex-[0_1_8rem]`}>
-        <option value="member">בן משפחה</option>
-        <option value="admin">מנהל</option>
-      </select>
       <button disabled={pending} className="rounded-2xl bg-ink px-5 py-3 font-semibold text-white disabled:opacity-60">
         {pending ? "מוסיף…" : "הוספה"}
       </button>

@@ -82,6 +82,7 @@ export function AlbumView({
     <>
       <AlbumHeader albumId={albumId} title={title} count={photos.length} canManage={canManage} />
 
+      {canManage && (
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <input
           ref={fileInput}
@@ -119,15 +120,22 @@ export function AlbumView({
           </div>
         )}
       </div>
+      )}
       {message && <p role="alert" className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-red-800">{message}</p>}
 
       {photos.length === 0 && !uploading ? (
-        <label
-          htmlFor="photo-upload"
-          className="mt-6 flex cursor-pointer flex-col items-center rounded-[2rem] border-2 border-dashed border-sun-deep/50 p-12 text-center text-lg text-muted hover:bg-sun/10"
-        >
-          האלבום עוד ריק. הוסיפו תמונות מהטלפון או מהמחשב.
-        </label>
+        canManage ? (
+          <label
+            htmlFor="photo-upload"
+            className="mt-6 flex cursor-pointer flex-col items-center rounded-[2rem] border-2 border-dashed border-sun-deep/50 p-12 text-center text-lg text-muted hover:bg-sun/10"
+          >
+            האלבום עוד ריק. הוסיפו תמונות מהטלפון או מהמחשב.
+          </label>
+        ) : (
+          <p className="mt-6 rounded-[2rem] border-2 border-dashed border-sun-deep/50 p-12 text-center text-lg text-muted">
+            האלבום עוד ריק.
+          </p>
+        )
       ) : (
         <ul className="mt-6 grid grid-cols-3 gap-1 sm:grid-cols-4 sm:gap-1.5 lg:grid-cols-5">
           {photos.map((p, i) => (

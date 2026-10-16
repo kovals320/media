@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
-import { requireMember } from "@/lib/auth";
-import { signPaths } from "@/lib/photos";
+import { getViewer } from "@/lib/auth";
+import { photoUrl } from "@/lib/photos";
 import { sortByTitleYear } from "@/lib/sort";
 import { NewAlbum } from "./NewAlbum";
 
@@ -11,7 +11,7 @@ type Album = { id: string; title: string; created_at: string };
 type PhotoRef = { album_id: string; thumb_path: string };
 
 export default async function PhotosPage() {
-  const { supabase } = await requireMember();
+  const { supabase, isAdmin } = await getViewer();
 
   const [{ data: albumRows }, { data: photoRows }] = await Promise.all([
     supabase.from("media_albums").select("id, title, created_at"),
@@ -30,25 +30,24 @@ export default async function PhotosPage() {
     counts.set(p.album_id, (counts.get(p.album_id) ?? 0) + 1);
     if (!covers.has(p.album_id)) covers.set(p.album_id, p.thumb_path);
   }
-  const urls = await signPaths(supabase, [...covers.values()]);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-5 pb-12 pt-6 sm:px-8 sm:pt-10">
       <BackLink />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-[2.6rem] leading-[1.05] sm:text-6xl">תמונות</h1>
-        <NewAlbum />
+        {isAdmin && <NewAlbum />}
       </div>
 
       {albums.length === 0 ? (
         <div className="mt-8 rounded-[2rem] border-2 border-dashed border-sun-deep/50 p-10 text-center text-lg text-muted">
-          עוד אין אלבומים. צרו את האלבום הראשון והוסיפו אליו תמונות.
+          עוד אין כאן אלבומים.
         </div>
       ) : (
         <ul className="mt-8 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
           {albums.map((a) => {
             const cover = covers.get(a.id);
-            const coverUrl = cover ? urls.get(cover) : undefined;
+            const coverUrl = cover ? photoUrl(supabase, cover) : undefined;
             const count = counts.get(a.id) ?? 0;
             return (
               <li key={a.id}>

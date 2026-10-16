@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { LoginForm } from "./LoginForm";
 
 export const metadata = { title: "כניסה – המדיה של המשפחה" };
@@ -9,7 +9,7 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { user } = await getSession();
+  const { user } = await getViewer();
   if (user) redirect("/");
   const { error } = await searchParams;
 
@@ -20,7 +20,7 @@ export default async function LoginPage({
         <span className="h-10 w-10 rotate-3 rounded-xl bg-lake" />
       </div>
       <h1 className="font-display text-[2.6rem] leading-[1.05]">המדיה של המשפחה</h1>
-      <p className="mt-2 text-lg text-muted">התמונות והסרטונים שלנו, רק למשפחה.</p>
+      <p className="mt-2 text-lg text-muted">כניסה למנהלים, להוספת תמונות וסרטונים.</p>
       <LoginForm linkError={error === "link"} />
     </main>
   );

@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { ResetForm } from "./ResetForm";
 
 export const metadata = { title: "סיסמה חדשה – המדיה של המשפחה" };
 
 export default async function ResetPasswordPage() {
-  const { user } = await getSession();
+  const { user } = await getViewer();
   if (!user) redirect("/login");
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-10">

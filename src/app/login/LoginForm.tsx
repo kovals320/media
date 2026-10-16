@@ -128,7 +128,7 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
         )}
         {mode !== "signup" && (
           <button type="button" onClick={() => setMode("signup")} className="underline-offset-4 hover:text-ink hover:underline">
-            פעם ראשונה כאן? יצירת חשבון
+            מנהל חדש? יצירת חשבון
           </button>
         )}
         {mode !== "reset" && (

@@ -1,10 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/api/health"];
-
-// Refreshes the Supabase session cookie on every request and sends
-// signed-out visitors to the sign-in page.
+// Keeps an admin's sign-in fresh. Visitors don't need to sign in.
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -27,21 +24,6 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
-
-  if (!user && !isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "";
-    const redirect = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
-    return redirect;
-  }
-
+  await supabase.auth.getUser();
   return response;
 }

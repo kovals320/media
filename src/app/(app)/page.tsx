@@ -1,27 +1,26 @@
 import Link from "next/link";
-import { requireMember } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { signOut } from "@/app/actions";
 
 export default async function Home() {
-  const { member } = await requireMember();
-  const name = member.display_name;
+  const { isAdmin } = await getViewer();
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 pb-8 pt-6 sm:px-8 sm:pt-10">
-      <div className="mb-6 flex items-center justify-between gap-3 sm:mb-8">
-        <p className="text-lg text-muted">{name ? `שלום, ${name}` : "המדיה של המשפחה"}</p>
-        <div className="flex items-center gap-1">
-          {member.role === "admin" && (
+      <div className="mb-6 flex min-h-9 items-center justify-between gap-3 sm:mb-8">
+        <p className="text-lg text-muted">המדיה של המשפחה</p>
+        {isAdmin && (
+          <div className="flex items-center gap-1">
             <Link href="/admin" className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink">
               ניהול
             </Link>
-          )}
-          <form action={signOut}>
-            <button className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink">
-              יציאה
-            </button>
-          </form>
-        </div>
+            <form action={signOut}>
+              <button className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink">
+                יציאה
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       <h1 className="mb-8 font-display text-[2.6rem] leading-[1.05] sm:mb-12 sm:text-6xl">

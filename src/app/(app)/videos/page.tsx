@@ -1,5 +1,5 @@
 import { BackLink } from "@/components/BackLink";
-import { requireMember } from "@/lib/auth";
+import { getViewer } from "@/lib/auth";
 import { sortByTitleYear } from "@/lib/sort";
 import { getPlaylistVideos, type Video } from "@/lib/youtube";
 import { VideoBrowser, type PlaylistView } from "./VideoBrowser";
@@ -9,7 +9,7 @@ export const metadata = { title: "סרטונים – המדיה של המשפח�
 type Playlist = { id: string; youtube_playlist_id: string; title: string };
 
 export default async function VideosPage() {
-  const { supabase } = await requireMember();
+  const { supabase } = await getViewer();
   const { data, error } = await supabase
     .from("media_playlists")
     .select("id, youtube_playlist_id, title")

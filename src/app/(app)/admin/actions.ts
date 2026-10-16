@@ -10,10 +10,9 @@ export async function addMember(_: FormState, formData: FormData): Promise<FormS
   const { supabase } = await requireAdmin();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const name = String(formData.get("name") ?? "").trim() || null;
-  const role = formData.get("role") === "admin" ? "admin" : "member";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "האימייל לא תקין.", ok: null };
 
-  const { error } = await supabase.from("media_members").insert({ email, display_name: name, role });
+  const { error } = await supabase.from("media_members").insert({ email, display_name: name, role: "admin" });
   if (error) {
     return {
       error: error.code === "23505" ? "האימייל הזה כבר ברשימה." : "לא הצלחנו להוסיף. נסו שוב.",
@@ -21,7 +20,7 @@ export async function addMember(_: FormState, formData: FormData): Promise<FormS
     };
   }
   revalidatePath("/admin");
-  return { error: null, ok: `${email} נוסף/ה למשפחה.` };
+  return { error: null, ok: `${email} נוסף/ה כמנהל/ת.` };
 }
 
 export async function removeMember(email: string) {

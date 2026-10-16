@@ -18,6 +18,7 @@ const assistant = Assistant({
 export const metadata: Metadata = {
   title: "המדיה של המשפחה",
   description: "התמונות והסרטונים של המשפחה במקום אחד",
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

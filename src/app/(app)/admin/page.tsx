@@ -21,10 +21,10 @@ export default async function AdminPage() {
       <h1 className="font-display text-[2.6rem] leading-[1.05] sm:text-6xl">ניהול</h1>
 
       <section className="mt-10" aria-labelledby="members-h">
-        <h2 id="members-h" className="font-display text-2xl sm:text-3xl">בני המשפחה</h2>
+        <h2 id="members-h" className="font-display text-2xl sm:text-3xl">מנהלים</h2>
         <p className="mt-1 text-muted">
-          רק האימיילים ברשימה יכולים להיכנס. מי שנוסף נכנס לאתר, בוחר &quot;יצירת חשבון&quot; עם אותו אימייל, ומאשר
-          את האימייל שיישלח אליו.
+          כל מי שיש לו את הקישור יכול לצפות. רק מנהלים יכולים להוסיף ולמחוק. מנהל חדש נכנס לכתובת
+          media.dorh.fyi/login, בוחר &quot;יצירת חשבון&quot; עם אותו אימייל, ומאשר את האימייל שיישלח אליו.
         </p>
         <ul className="mt-4 divide-y divide-ink/10 rounded-2xl bg-white">
           {((members ?? []) as MemberRow[]).map((m) => (
@@ -32,14 +32,13 @@ export default async function AdminPage() {
               <div className="min-w-0">
                 <p className="font-semibold">
                   {m.display_name ?? m.email}
-                  {m.role === "admin" && <span className="ms-2 rounded-full bg-sun/50 px-2 py-0.5 text-sm font-normal">מנהל</span>}
                 </p>
                 {m.display_name && <p dir="ltr" className="truncate text-end text-sm text-muted">{m.email}</p>}
               </div>
               {m.email !== me.email && (
                 <RemoveButton
                   action={removeMember.bind(null, m.email)}
-                  confirmText={`להסיר את ${m.display_name ?? m.email} מהמשפחה?`}
+                  confirmText={`להסיר את ${m.display_name ?? m.email} מהמנהלים?`}
                 />
               )}
             </li>
