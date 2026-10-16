@@ -44,6 +44,19 @@ export async function GET() {
     (search?.body as { assets?: { items?: Record<string, unknown>[]; total?: number; nextPage?: unknown } })?.assets;
   const sample = items?.items?.[0];
   const albums = await call("/api/albums");
+  const searchStats = firstLib
+    ? await call("/api/search/statistics", { method: "POST", body: JSON.stringify({ libraryId: firstLib.id, type: "IMAGE" }) })
+    : null;
+  let thumb: { status: number; type: string | null; bytes: number } | null = null;
+  if (sample?.id) {
+    const base = process.env.IMMICH_URL?.replace(/\/$/, "");
+    const r = await fetch(`${base}/api/assets/${sample.id}/thumbnail?size=preview`, {
+      headers: { "x-api-key": process.env.IMMICH_API_KEY ?? "" },
+      cache: "no-store",
+    });
+    const buf = await r.arrayBuffer();
+    thumb = { status: r.status, type: r.headers.get("content-type"), bytes: buf.byteLength };
+  }
   const buckets = await call("/api/timeline/buckets");
 
   return NextResponse.json({
@@ -83,6 +96,8 @@ export async function GET() {
         : null,
       error: search && search.status !== 200 ? search.body : undefined,
     },
+    searchStats,
+    thumb,
     albums: { status: albums.status, count: Array.isArray(albums.body) ? albums.body.length : null },
     timelineBuckets: { status: buckets.status, sample: Array.isArray(buckets.body) ? buckets.body.slice(0, 3) : buckets.body },
   });
