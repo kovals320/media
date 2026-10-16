@@ -45,8 +45,23 @@ async function checkYouTube() {
   }
 }
 
+async function checkImmich() {
+  const base = process.env.IMMICH_URL?.replace(/\/$/, "");
+  const key = process.env.IMMICH_API_KEY;
+  if (!base || !key) return "missing IMMICH_URL / IMMICH_API_KEY";
+  try {
+    const res = await fetch(`${base}/api/libraries`, {
+      headers: { "x-api-key": key },
+      cache: "no-store",
+    });
+    return res.ok ? "connected" : `status ${res.status}`;
+  } catch {
+    return "unreachable";
+  }
+}
+
 export async function GET() {
-  const [supabase, youtube] = await Promise.all([checkSupabase(), checkYouTube()]);
-  const ok = supabase === "connected" && youtube.status === "connected";
-  return NextResponse.json({ ok, supabase, youtube }, { status: ok ? 200 : 502 });
+  const [supabase, youtube, immich] = await Promise.all([checkSupabase(), checkYouTube(), checkImmich()]);
+  const ok = supabase === "connected" && youtube.status === "connected" && immich === "connected";
+  return NextResponse.json({ ok, supabase, youtube, immich }, { status: ok ? 200 : 502 });
 }

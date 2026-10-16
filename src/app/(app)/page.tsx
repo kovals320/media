@@ -50,7 +50,7 @@ export default async function Home() {
             </div>
           </div>
           <span className="font-display text-4xl text-ink sm:text-5xl">תמונות</span>
-          <span className="mt-1 text-lg text-ink/75">כל הרגעים, לפי אלבומים</span>
+          <span className="mt-1 text-lg text-ink/75">כל הרגעים, שנה אחרי שנה</span>
         </Link>
 
         {/* Videos */}

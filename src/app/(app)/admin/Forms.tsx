@@ -53,7 +53,7 @@ export function RefreshYouTubeButton() {
   return (
     <form action={action} className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-lake/10 p-4">
       <div className="min-w-0 flex-[1_1_16rem]">
-        <p className="font-semibold">שיניתם משהו ביוטיוב?</p>
+        <p className="font-semibold">שיניתם משהו ביוטיוב או בשרת התמונות?</p>
         <p className="text-muted">האפליקציה מתעדכנת לבד תוך חצי שעה. לחיצה כאן מעדכנת מיד.</p>
       </div>
       <button
@@ -63,7 +63,7 @@ export function RefreshYouTubeButton() {
         <svg aria-hidden viewBox="0 0 24 24" className={`h-5 w-5 fill-none stroke-current stroke-2 ${pending ? "animate-spin" : ""}`}>
           <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        {pending ? "מעדכן…" : "רענון מיוטיוב"}
+        {pending ? "מעדכן…" : "רענון תוכן"}
       </button>
       <Feedback state={state} />
     </form>

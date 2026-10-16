@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
+import { IMMICH_CACHE_TAG } from "@/lib/immich";
 import { getPlaylistInfo, YOUTUBE_CACHE_TAG } from "@/lib/youtube";
 
 export type FormState = { error: string | null; ok: string | null };
@@ -56,15 +57,17 @@ export async function removePlaylist(id: string) {
   revalidatePath("/videos");
 }
 
-// Drop the saved YouTube data so the next visit reads fresh titles and videos.
+// Drop the saved YouTube and Immich data so the next visit reads fresh content.
 export async function refreshFromYouTube(_: FormState): Promise<FormState> {
   await requireAdmin();
   updateTag(YOUTUBE_CACHE_TAG);
+  updateTag(IMMICH_CACHE_TAG);
   revalidatePath("/videos");
+  revalidatePath("/photos", "layout");
   const time = new Intl.DateTimeFormat("he-IL", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Asia/Jerusalem",
   }).format(new Date());
-  return { error: null, ok: `עודכן ב-${time}. השינויים מיוטיוב כבר מופיעים באפליקציה.` };
+  return { error: null, ok: `עודכן ב-${time}. השינויים מיוטיוב ומשרת התמונות כבר מופיעים באפליקציה.` };
 }

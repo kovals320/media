@@ -8,7 +8,7 @@ Stack: Next.js (App Router, TypeScript, Tailwind) on Vercel, Supabase for login,
 
 - **Admin:** a single admin (dor@kne.org.il) signs in at `/login` to edit. There is no sign-up. The `media_members` list is locked and can only be changed directly in the database.
 - **Videos:** playlists listed in `media_playlists` are only sources. All their videos are merged into one list (duplicates removed), read live from the YouTube Data API (cached 30 min), sorted by the year in each title, newest first; titles without a year come first.
-- **Photos:** albums in `media_albums`, photos in `media_photos`. Files live in the private `media-photos` bucket. Photos are resized in the browser before upload (2560px full copy + 640px thumbnail) and shown through signed links.
+- **Photos:** read from the family Immich server (`IMMICH_URL`, read-only `IMMICH_API_KEY`). Each external library named after a year is one year in the app. Images are served through `/api/photo/[id]/thumb|full` (Immich's resized copies, never originals) and cached on Vercel's CDN. Lists are cached for an hour; the admin "refresh" button clears them.
 
 ## Supabase
 
@@ -21,5 +21,7 @@ Shared project `home`. Every table, function and bucket for this app uses the `m
 | `NEXT_PUBLIC_SUPABASE_URL` | Vercel (Config) |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Vercel (Config) |
 | `YOUTUBE_API_KEY` | Vercel (Secret) |
+| `IMMICH_URL` | Vercel (Config), `https://photos.dorh.fyi` |
+| `IMMICH_API_KEY` | Vercel (Secret), read-only Immich key |
 
 Copy `.env.example` to `.env.local` for local development. Connection check: `/api/health`.
