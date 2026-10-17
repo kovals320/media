@@ -54,6 +54,7 @@ type SearchItem = {
   originalFileName?: string | null;
   isTrashed?: boolean;
   visibility?: string;
+  exifInfo?: { make?: string | null; model?: string | null } | null;
 };
 type SearchResponse = { assets: { items: SearchItem[]; nextPage: string | null } };
 
@@ -76,23 +77,68 @@ function visible(item: SearchItem) {
   return item.type === "IMAGE" && !item.isTrashed && item.visibility !== "hidden" && item.visibility !== "locked";
 }
 
+// TRIAL (2026 only): photos with no real capture date (e.g. WhatsApp, which strips it)
+// get the date written in their file name instead of the date the file was copied.
+// To undo, remove the folder from this list.
+const FILENAME_DATE_FOLDERS = new Set(["2026"]);
+
+const pad = (n: number, len = 2) => String(n).padStart(len, "0");
+
+/** A capture date written in a file name, e.g. IMG-20260219-WA0012.jpg or PXL_20260727_153444908.jpg. */
+export function dateFromFileName(name: string): string | null {
+  // WhatsApp: date only; the WA counter keeps that day's photos in order.
+  const wa = name.match(/(?:^|\D)((?:19|20)\d{2})(\d{2})(\d{2})-WA(\d{1,5})/i);
+  if (wa) {
+    const [, y, m, d, n] = wa;
+    const seq = Math.min(Number(n), 86399);
+    return `${y}-${m}-${d}T${pad(Math.floor(seq / 3600))}:${pad(Math.floor((seq % 3600) / 60))}:${pad(seq % 60)}.000Z`;
+  }
+  // Date and time: PXL_20260727_153444908, IMG_20260727_153444, Screenshot_20260727-153444, 20260727_153444
+  const dt = name.match(/(?:^|\D)((?:19|20)\d{2})(\d{2})(\d{2})[_-](\d{2})(\d{2})(\d{2})/);
+  if (dt) {
+    const [, y, m, d, hh, mm, ss] = dt;
+    return `${y}-${m}-${d}T${hh}:${mm}:${ss}.000Z`;
+  }
+  // Date only: IMG-20260219, Photo_20260219
+  const d8 = name.match(/(?:^|\D)((?:19|20)\d{2})(\d{2})(\d{2})(?:\D|$)/);
+  if (d8) {
+    const [, y, m, d] = d8;
+    return `${y}-${m}-${d}T12:00:00.000Z`;
+  }
+  return null;
+}
+
+function isValidDate(iso: string) {
+  const t = new Date(iso);
+  if (Number.isNaN(t.getTime())) return false;
+  return iso.startsWith(t.toISOString().slice(0, 10)); // rejects e.g. 2026-02-31
+}
+
 // Every photo in one year folder (cached per folder to keep each cache entry small).
 const getFolderPhotos = unstable_cache(
   async (libraryId: string, folder: string): Promise<CatalogPhoto[]> => {
+    const useFileName = FILENAME_DATE_FOLDERS.has(folder);
     const photos: CatalogPhoto[] = [];
     let page: number | null = 1;
     while (page) {
       const res: SearchResponse = await immich<SearchResponse>("/api/search/metadata", {
         method: "POST",
-        body: { libraryId, type: "IMAGE", size: 1000, page },
+        body: { libraryId, type: "IMAGE", size: 1000, page, withExif: useFileName },
       });
       for (const item of res.assets.items) {
         if (!visible(item)) continue;
+        let t = item.localDateTime ?? item.fileCreatedAt ?? null;
+        if (useFileName) {
+          // A camera wrote real capture info: trust it. Otherwise prefer the name's date.
+          const hasCamera = Boolean(item.exifInfo?.make || item.exifInfo?.model);
+          const fromName = item.originalFileName ? dateFromFileName(item.originalFileName) : null;
+          if (!hasCamera && fromName && isValidDate(fromName)) t = fromName;
+        }
         photos.push({
           id: item.id,
           w: item.width ?? null,
           h: item.height ?? null,
-          t: item.localDateTime ?? item.fileCreatedAt ?? null,
+          t,
           folder,
           file: item.originalFileName ?? "",
         });
@@ -102,7 +148,7 @@ const getFolderPhotos = unstable_cache(
     }
     return photos;
   },
-  ["immich-folder-photos-v4"],
+  ["immich-folder-photos-v5"],
   { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
