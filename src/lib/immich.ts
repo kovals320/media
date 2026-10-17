@@ -77,10 +77,10 @@ function visible(item: SearchItem) {
   return item.type === "IMAGE" && !item.isTrashed && item.visibility !== "hidden" && item.visibility !== "locked";
 }
 
-// TRIAL (2026 only): photos with no real capture date (e.g. WhatsApp, which strips it)
-// get the date written in their file name instead of the date the file was copied.
-// To undo, remove the folder from this list.
-const FILENAME_DATE_FOLDERS = new Set(["2026"]);
+// Photos with no real capture date (e.g. WhatsApp, which strips it) get the date
+// written in their file name instead of the date the file was copied.
+// Set to false to go back to Immich's date only.
+const USE_FILENAME_DATES = true;
 
 const pad = (n: number, len = 2) => String(n).padStart(len, "0");
 
@@ -117,7 +117,7 @@ function isValidDate(iso: string) {
 // Every photo in one year folder (cached per folder to keep each cache entry small).
 const getFolderPhotos = unstable_cache(
   async (libraryId: string, folder: string): Promise<CatalogPhoto[]> => {
-    const useFileName = FILENAME_DATE_FOLDERS.has(folder);
+    const useFileName = USE_FILENAME_DATES;
     const photos: CatalogPhoto[] = [];
     let page: number | null = 1;
     while (page) {
@@ -148,7 +148,7 @@ const getFolderPhotos = unstable_cache(
     }
     return photos;
   },
-  ["immich-folder-photos-v5"],
+  ["immich-folder-photos-v6"],
   { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
