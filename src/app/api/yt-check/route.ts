@@ -45,6 +45,26 @@ export async function GET() {
     perPlaylist.push({ title: p.title, items: items.length, statuses });
   }
 
+  // Duplicates and private entries in each playlist (with their position in the playlist)
+  const details = [];
+  for (const p of playlists) {
+    const items = await allItems(p.youtube_playlist_id);
+    const seenAt = new Map<string, number[]>();
+    items.forEach((it, i) => {
+      const id = it.snippet.resourceId.videoId;
+      seenAt.set(id, [...(seenAt.get(id) ?? []), i + 1]);
+    });
+    details.push({
+      playlist: p.title,
+      private: items
+        .map((it, i) => ({ pos: i + 1, status: it.status?.privacyStatus, title: it.snippet.title }))
+        .filter((x) => x.status === "private" || x.status === "privacyStatusUnspecified"),
+      duplicates: [...seenAt.entries()]
+        .filter(([, pos]) => pos.length > 1)
+        .map(([id, pos]) => ({ title: items[pos[0] - 1].snippet.title, positions: pos, id })),
+    });
+  }
+
   const ch = await yt<{ items: { contentDetails: { relatedPlaylists: { uploads: string } }; statistics: { videoCount: string } }[] }>(
     "channels",
     { part: "contentDetails,statistics", id: channelId ?? "" },
@@ -57,6 +77,7 @@ export async function GET() {
     channelVideoCountPublic: ch.items?.[0]?.statistics.videoCount,
     perPlaylist,
     uniqueShownInApp: inApp.size,
+    details,
     uploadsVisibleToApp: uploads.length,
     channelVideosNotInAnyAppPlaylist: notInApp.map((u) => `${u.status?.privacyStatus} | ${u.snippet.title}`),
   });
