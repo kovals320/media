@@ -23,9 +23,7 @@ export default async function Home() {
         )}
       </div>
 
-      <h1 className="mb-8 font-display text-[2.6rem] leading-[1.05] sm:mb-12 sm:text-6xl">
-        מה רוצים לראות?
-      </h1>
+      <h1 className="sr-only">המדיה של המשפחה</h1>
 
       <nav
         aria-label="בחירת סוג מדיה"
@@ -50,7 +48,6 @@ export default async function Home() {
             </div>
           </div>
           <span className="font-display text-4xl text-ink sm:text-5xl">תמונות</span>
-          <span className="mt-1 text-lg text-ink/75">כל הרגעים, שנה אחרי שנה</span>
         </Link>
 
         {/* Videos */}
@@ -71,7 +68,6 @@ export default async function Home() {
             </div>
           </div>
           <span className="font-display text-4xl sm:text-5xl">סרטונים</span>
-          <span className="mt-1 text-lg text-white/80">לשבת ולצפות ביחד</span>
         </Link>
       </nav>
     </main>
