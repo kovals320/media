@@ -1,6 +1,35 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { getViewer } from "@/lib/auth";
+import { getYears } from "@/lib/immich";
 import { signOut } from "@/app/actions";
+import { loadVideos } from "./videos/loadVideos";
+
+// Totals next to each tile; they follow the same caches as the pages
+// (photos: hourly, videos: every 30 minutes, or right away with the admin refresh).
+async function PhotoCount() {
+  try {
+    const years = await getYears();
+    const total = years.reduce((n, y) => n + (y.count ?? 0), 0);
+    return <Count n={total} className="text-ink/70" />;
+  } catch {
+    return null;
+  }
+}
+
+async function VideoCount() {
+  try {
+    const { videos } = await loadVideos();
+    return <Count n={videos.length} className="text-white/75" />;
+  } catch {
+    return null;
+  }
+}
+
+function Count({ n, className }: { n: number; className: string }) {
+  if (n <= 0) return null;
+  return <span className={`text-xl font-semibold tabular-nums sm:text-2xl ${className}`}>{n.toLocaleString("he-IL")}</span>;
+}
 
 export default async function Home() {
   const { isAdmin } = await getViewer();
@@ -46,7 +75,12 @@ export default async function Home() {
               </div>
             </div>
           </div>
-          <span className="font-display text-4xl text-ink sm:text-5xl">תמונות</span>
+          <span className="flex items-baseline gap-3">
+            <span className="font-display text-4xl text-ink sm:text-5xl">תמונות</span>
+            <Suspense fallback={null}>
+              <PhotoCount />
+            </Suspense>
+          </span>
         </Link>
 
         {/* Videos */}
@@ -66,7 +100,12 @@ export default async function Home() {
               </svg>
             </div>
           </div>
-          <span className="font-display text-4xl sm:text-5xl">סרטונים</span>
+          <span className="flex items-baseline gap-3">
+            <span className="font-display text-4xl sm:text-5xl">סרטונים</span>
+            <Suspense fallback={null}>
+              <VideoCount />
+            </Suspense>
+          </span>
         </Link>
       </nav>
     </main>
