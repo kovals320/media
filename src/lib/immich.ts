@@ -68,7 +68,7 @@ const listYearLibraries = unstable_cache(
     const libs = await immich<Library[]>("/api/libraries");
     return libs.filter((l) => isYear(l.name)).map((l) => ({ id: l.id, folder: l.name.trim() }));
   },
-  ["immich-libraries-v3"],
+  ["immich-libraries-v4"],
   { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
@@ -102,7 +102,7 @@ const getFolderPhotos = unstable_cache(
     }
     return photos;
   },
-  ["immich-folder-photos-v3"],
+  ["immich-folder-photos-v4"],
   { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
