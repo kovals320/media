@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
-import { addPlaylist, refreshFromYouTube, type FormState } from "./actions";
+import { addPlaylist, refreshFromYouTube, setVideoTitle, type FormState } from "./actions";
 
 const initial: FormState = { error: null, ok: null };
 const inputClass =
@@ -64,6 +64,32 @@ export function RefreshYouTubeButton() {
           <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         {pending ? "מעדכן…" : "רענון תוכן"}
+      </button>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+export function VideoTitleForm({
+  videoId,
+  youtubeTitle,
+  current,
+}: {
+  videoId: string;
+  youtubeTitle: string;
+  current: string;
+}) {
+  const [state, action, pending] = useActionState(setVideoTitle.bind(null, videoId, youtubeTitle), initial);
+  return (
+    <form action={action} className="mt-2 flex flex-wrap gap-2">
+      <input
+        name="title"
+        defaultValue={current}
+        aria-label="השם באפליקציה"
+        className={`${inputClass} flex-[1_1_14rem] py-2 text-base`}
+      />
+      <button disabled={pending} className="rounded-2xl bg-ink px-4 py-2 font-semibold text-white disabled:opacity-60">
+        {pending ? "שומר…" : "שמירה"}
       </button>
       <Feedback state={state} />
     </form>

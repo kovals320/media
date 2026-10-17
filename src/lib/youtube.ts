@@ -9,7 +9,8 @@ const API = "https://www.googleapis.com/youtube/v3";
 
 export type Video = {
   id: string;
-  title: string;
+  title: string; // shown in the app (a display title set by the admin, if any)
+  youtubeTitle?: string; // the title on YouTube
   thumbnail: string;
   publishedAt: string | null;
   duration: string | null; // e.g. "4:07" or "1:02:15"

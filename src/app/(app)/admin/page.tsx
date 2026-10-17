@@ -1,8 +1,10 @@
 import { BackLink } from "@/components/BackLink";
 import { requireAdmin } from "@/lib/auth";
 import { getFolderMismatches, type FolderMismatch } from "@/lib/immich";
-import { AddPlaylistForm, RefreshYouTubeButton, RemoveButton } from "./Forms";
-import { removePlaylist } from "./actions";
+import { AddPlaylistForm, RefreshYouTubeButton, RemoveButton, VideoTitleForm } from "./Forms";
+import { removePlaylist, removeVideoTitle } from "./actions";
+import { loadVideos } from "../videos/loadVideos";
+import { yearInTitle } from "@/lib/sort";
 
 export const metadata = { title: "ניהול – המדיה של המשפחה" };
 
@@ -44,6 +46,7 @@ export default async function AdminPage() {
         <AddPlaylistForm />
         <RefreshYouTubeButton />
       </section>
+      <VideoTitlesSection />
       <PhotoDatesReport />
     </main>
   );
@@ -104,6 +107,75 @@ async function PhotoDatesReport() {
               </details>
             ))}
           </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+async function VideoTitlesSection() {
+  let videos: Awaited<ReturnType<typeof loadVideos>>["videos"] = [];
+  try {
+    ({ videos } = await loadVideos());
+  } catch {
+    return null;
+  }
+  const renamed = videos.filter((v) => v.youtubeTitle && v.title !== v.youtubeTitle);
+  const noYear = videos.filter((v) => yearInTitle(v.title) === null);
+
+  const Row = ({ v }: { v: (typeof videos)[number] }) => (
+    <div className="flex gap-3 px-4 py-3">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={v.thumbnail} alt="" loading="lazy" className="aspect-video w-24 shrink-0 rounded-lg object-cover sm:w-32" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm text-muted">
+          ביוטיוב:{" "}
+          <a href={`https://www.youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline">
+            {v.youtubeTitle ?? v.title}
+          </a>
+        </p>
+        <VideoTitleForm videoId={v.id} youtubeTitle={v.youtubeTitle ?? v.title} current={v.title} />
+      </div>
+    </div>
+  );
+
+  return (
+    <section className="mt-12" aria-labelledby="titles-h">
+      <h2 id="titles-h" className="font-display text-2xl sm:text-3xl">שמות הסרטים באפליקציה</h2>
+      <p className="mt-1 text-muted">
+        אפשר לתת לסרט שם אחר שיוצג רק באפליקציה, למשל להוסיף שנה לסרט מערוץ אחר. ביוטיוב שום דבר לא משתנה. מחיקת השם
+        ושמירה מחזירות לשם שביוטיוב.
+      </p>
+
+      <h3 className="mt-6 font-semibold">סרטים בלי שנה בשם ({noYear.length})</h3>
+      {noYear.length === 0 ? (
+        <p className="mt-2 rounded-2xl bg-lake/10 p-4 text-lake-deep">לכל הסרטים יש שנה בשם.</p>
+      ) : (
+        <ul className="mt-2 divide-y divide-ink/10 rounded-2xl bg-white">
+          {noYear.map((v) => (
+            <li key={v.id}>
+              <Row v={v} />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {renamed.length > 0 && (
+        <>
+          <h3 className="mt-6 font-semibold">סרטים ששמם שונה באפליקציה ({renamed.length})</h3>
+          <ul className="mt-2 divide-y divide-ink/10 rounded-2xl bg-white">
+            {renamed.map((v) => (
+              <li key={v.id} className="relative">
+                <Row v={v} />
+                <div className="px-4 pb-3 sm:absolute sm:left-2 sm:top-2 sm:p-0">
+                  <RemoveButton
+                    action={removeVideoTitle.bind(null, v.id)}
+                    confirmText={`להחזיר את "${v.title}" לשם שביוטיוב?`}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </section>
