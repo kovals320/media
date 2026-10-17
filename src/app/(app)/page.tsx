@@ -7,10 +7,10 @@ export default async function Home() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 pb-8 pt-6 sm:px-8 sm:pt-10">
-      <div className="mb-6 flex min-h-9 items-center justify-between gap-3 sm:mb-8">
-        <p className="text-lg text-muted">המדיה של המשפחה</p>
+      <div className="relative mb-6 flex min-h-9 items-center justify-center sm:mb-8">
+        <h1 className="text-center font-display text-2xl text-ink sm:text-3xl">המדיה של המשפחה</h1>
         {isAdmin && (
-          <div className="flex items-center gap-1">
+          <div className="absolute left-0 top-1/2 flex -translate-y-1/2 items-center gap-1">
             <Link href="/admin" className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink">
               ניהול
             </Link>
@@ -23,7 +23,6 @@ export default async function Home() {
         )}
       </div>
 
-      <h1 className="sr-only">המדיה של המשפחה</h1>
 
       <nav
         aria-label="בחירת סוג מדיה"
