@@ -53,13 +53,14 @@ type SearchItem = {
   fileCreatedAt?: string | null;
   originalFileName?: string | null;
   isTrashed?: boolean;
+  isFavorite?: boolean;
   visibility?: string;
   exifInfo?: { make?: string | null; model?: string | null } | null;
 };
 type SearchResponse = { assets: { items: SearchItem[]; nextPage: string | null } };
 
 /** A photo as stored in our cache: which folder (year library) it's in and when it was taken. */
-type CatalogPhoto = Photo & { folder: string; file: string };
+type CatalogPhoto = Photo & { folder: string; file: string; fav: boolean };
 
 const isYear = (name: string) => /^(19|20)\d\d$/.test(name.trim());
 
@@ -141,6 +142,7 @@ const getFolderPhotos = unstable_cache(
           t,
           folder,
           file: item.originalFileName ?? "",
+          fav: Boolean(item.isFavorite),
         });
       }
       const next: number = res.assets.nextPage ? Number(res.assets.nextPage) : NaN;
@@ -148,7 +150,7 @@ const getFolderPhotos = unstable_cache(
     }
     return photos;
   },
-  ["immich-folder-photos-v6"],
+  ["immich-folder-photos-v7"],
   { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
@@ -166,6 +168,22 @@ function photoYear(p: CatalogPhoto) {
 
 const strip = ({ id, w, h, t }: CatalogPhoto): Photo => ({ id, w, h, t });
 
+/** Days since 1970 in Israel time, so the chosen cover changes once a day at midnight. */
+function dayNumber() {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date());
+  return Math.floor(Date.parse(`${today}T00:00:00Z`) / 86_400_000);
+}
+
+/**
+ * A year's cover: a photo marked as favorite (heart) in Immich. With several
+ * favorites, a different one each day. Without favorites, a fixed photo.
+ */
+function pickCover(photos: CatalogPhoto[]) {
+  const favs = photos.filter((p) => p.fav).sort((a, b) => a.id.localeCompare(b.id));
+  if (favs.length > 0) return favs[dayNumber() % favs.length].id;
+  return photos[Math.floor(photos.length * 0.37)]?.id ?? null;
+}
+
 export async function getYears(): Promise<YearSummary[]> {
   const catalog = await getCatalog();
   const byYear = new Map<string, CatalogPhoto[]>();
@@ -181,8 +199,7 @@ export async function getYears(): Promise<YearSummary[]> {
       libraryId: year,
       year,
       count: photos.length,
-      // a stable "random" cover so it stays cached
-      coverId: photos[Math.floor(photos.length * 0.37)]?.id ?? null,
+      coverId: pickCover(photos),
     }));
 }
 
