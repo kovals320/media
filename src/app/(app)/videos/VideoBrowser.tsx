@@ -44,7 +44,7 @@ export function VideoBrowser({ videos, initialIndex }: { videos: Video[]; initia
         <section key={g.label} className="mt-10 sm:mt-12" aria-label={g.label}>
           <h2 className="mb-4 flex items-baseline gap-3">
             <span className="font-display text-3xl sm:text-4xl">{g.label}</span>
-            <span className="text-muted">{g.items.length === 1 ? "סרטון אחד" : `${g.items.length} סרטונים`}</span>
+            <span className="text-muted">{g.items.length === 1 ? "סרט אחד" : `${g.items.length} סרטים`}</span>
           </h2>
           <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4">
             {g.items.map(({ video: v, index }) => (
