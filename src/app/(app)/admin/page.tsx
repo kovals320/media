@@ -22,7 +22,7 @@ export default async function AdminPage() {
 
       <section className="mt-10" aria-labelledby="playlists-h">
         <h2 id="playlists-h" className="font-display text-2xl sm:text-3xl">פלייליסטים ביוטיוב</h2>
-        <p className="mt-1 text-muted">הפלייליסטים הם רק מקור: כל הסרטונים מכולם מוצגים יחד, לפי השנה שבכותרת. סרטונים בלי שנה מופיעים ראשונים.</p>
+        <p className="mt-1 text-muted">הפלייליסטים הם רק מקור: כל הסרטים מכולם מוצגים יחד, לפי השנה שבכותרת. סרטים בלי שנה מופיעים ראשונים.</p>
         <ul className="mt-4 divide-y divide-ink/10 rounded-2xl bg-white">
           {((playlists ?? []) as PlaylistRow[]).map((p) => (
             <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -36,7 +36,7 @@ export default async function AdminPage() {
               </a>
               <RemoveButton
                 action={removePlaylist.bind(null, p.id)}
-                confirmText={`להסיר את "${p.title}" מהאפליקציה? הסרטונים נשארים ביוטיוב.`}
+                confirmText={`להסיר את "${p.title}" מהאפליקציה? הסרטים נשארים ביוטיוב.`}
               />
             </li>
           ))}

@@ -101,7 +101,7 @@ export default async function Home() {
             </div>
           </div>
           <span className="flex items-baseline gap-3">
-            <span className="font-display text-4xl sm:text-5xl">סרטונים</span>
+            <span className="font-display text-4xl sm:text-5xl">סרטים</span>
             <Suspense fallback={null}>
               <VideoCount />
             </Suspense>

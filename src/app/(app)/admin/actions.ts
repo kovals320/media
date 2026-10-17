@@ -47,7 +47,7 @@ export async function addPlaylist(_: FormState, formData: FormData): Promise<For
   }
   revalidatePath("/admin");
   revalidatePath("/videos");
-  return { error: null, ok: `"${info.title}" נוסף (${info.count} סרטונים).` };
+  return { error: null, ok: `"${info.title}" נוסף (${info.count} סרטים).` };
 }
 
 export async function removePlaylist(id: string) {

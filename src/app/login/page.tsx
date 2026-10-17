@@ -20,7 +20,7 @@ export default async function LoginPage({
         <span className="h-10 w-10 rotate-3 rounded-xl bg-lake" />
       </div>
       <h1 className="font-display text-[2.6rem] leading-[1.05]">המדיה של המשפחה</h1>
-      <p className="mt-2 text-lg text-muted">כניסת מנהל, להוספת תמונות וסרטונים.</p>
+      <p className="mt-2 text-lg text-muted">כניסת מנהל, להוספת תמונות וסרטים.</p>
       <LoginForm linkError={error === "link"} />
     </main>
   );
