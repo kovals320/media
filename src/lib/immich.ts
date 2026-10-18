@@ -18,7 +18,10 @@ export type Photo = {
   w: number | null;
   h: number | null;
   t: string | null; // local date-time the photo was taken
+  pp?: string[]; // ids of the named people in the photo
 };
+
+export type PersonSummary = { id: string; name: string; count: number; coverId: string };
 
 function config() {
   const base = process.env.IMMICH_URL?.replace(/\/$/, "");
@@ -56,11 +59,14 @@ type SearchItem = {
   isFavorite?: boolean;
   visibility?: string;
   exifInfo?: { make?: string | null; model?: string | null } | null;
+  people?: { id: string; name?: string | null; isHidden?: boolean }[] | null;
 };
 type SearchResponse = { assets: { items: SearchItem[]; nextPage: string | null } };
 
 /** A photo as stored in our cache: which folder (year library) it's in and when it was taken. */
 type CatalogPhoto = Photo & { folder: string; file: string; fav: boolean };
+/** One year folder: its photos, plus the names of the people who appear in them. */
+type FolderData = { photos: CatalogPhoto[]; names: [string, string][] };
 
 const isYear = (name: string) => /^(19|20)\d\d$/.test(name.trim());
 
@@ -116,15 +122,16 @@ function isValidDate(iso: string) {
 }
 
 // Every photo in one year folder (cached per folder to keep each cache entry small).
-const getFolderPhotos = unstable_cache(
-  async (libraryId: string, folder: string): Promise<CatalogPhoto[]> => {
+const getFolderData = unstable_cache(
+  async (libraryId: string, folder: string): Promise<FolderData> => {
     const useFileName = USE_FILENAME_DATES;
     const photos: CatalogPhoto[] = [];
+    const names = new Map<string, string>();
     let page: number | null = 1;
     while (page) {
       const res: SearchResponse = await immich<SearchResponse>("/api/search/metadata", {
         method: "POST",
-        body: { libraryId, type: "IMAGE", size: 1000, page, withExif: useFileName },
+        body: { libraryId, type: "IMAGE", size: 1000, page, withExif: useFileName, withPeople: true },
       });
       for (const item of res.assets.items) {
         if (!visible(item)) continue;
@@ -135,6 +142,14 @@ const getFolderPhotos = unstable_cache(
           const fromName = item.originalFileName ? dateFromFileName(item.originalFileName) : null;
           if (!hasCamera && fromName && isValidDate(fromName)) t = fromName;
         }
+        // Only people given a name in Immich (and not hidden there) are shown.
+        const pp: string[] = [];
+        for (const person of item.people ?? []) {
+          const name = person.name?.trim();
+          if (!name || person.isHidden) continue;
+          names.set(person.id, name);
+          if (!pp.includes(person.id)) pp.push(person.id);
+        }
         photos.push({
           id: item.id,
           w: item.width ?? null,
@@ -143,21 +158,32 @@ const getFolderPhotos = unstable_cache(
           folder,
           file: item.originalFileName ?? "",
           fav: Boolean(item.isFavorite),
+          ...(pp.length > 0 ? { pp } : {}),
         });
       }
       const next: number = res.assets.nextPage ? Number(res.assets.nextPage) : NaN;
       page = Number.isFinite(next) ? next : null;
     }
-    return photos;
+    return { photos, names: [...names.entries()] };
   },
-  ["immich-folder-photos-v7"],
+  ["immich-folder-data-v8"],
   { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
-async function getCatalog(): Promise<CatalogPhoto[]> {
+async function getFolders(): Promise<FolderData[]> {
   const libs = await listYearLibraries();
-  const parts = await Promise.all(libs.map((l) => getFolderPhotos(l.id, l.folder)));
-  return parts.flat();
+  return Promise.all(libs.map((l) => getFolderData(l.id, l.folder)));
+}
+
+async function getCatalog(): Promise<CatalogPhoto[]> {
+  return (await getFolders()).flatMap((f) => f.photos);
+}
+
+/** Names of everyone who appears in the year folders, by person id. */
+export async function getPeopleNames(): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  for (const f of await getFolders()) for (const [id, name] of f.names) names.set(id, name);
+  return names;
 }
 
 /** The year a photo belongs to: the year it was taken, or its folder if it has no date. */
@@ -166,7 +192,7 @@ function photoYear(p: CatalogPhoto) {
   return y && /^\d{4}$/.test(y) ? y : p.folder;
 }
 
-const strip = ({ id, w, h, t }: CatalogPhoto): Photo => ({ id, w, h, t });
+const strip = ({ id, w, h, t, pp }: CatalogPhoto): Photo => ({ id, w, h, t, ...(pp ? { pp } : {}) });
 
 /** Days since 1970 in Israel time, so the chosen cover changes once a day at midnight. */
 function dayNumber() {
@@ -236,6 +262,46 @@ export async function getFolderMismatches(): Promise<FolderMismatch[]> {
     .filter((f) => f.photos.length > 0)
     .sort((a, b) => Number(b.folder) - Number(a.folder))
     .map((f) => ({ ...f, photos: f.photos.sort((a, b) => (a.taken ?? "").localeCompare(b.taken ?? "")) }));
+}
+
+/** Everyone named in Immich who appears in the photos, most photos first. */
+export async function getPeople(): Promise<PersonSummary[]> {
+  const [catalog, names] = await Promise.all([getCatalog(), getPeopleNames()]);
+  const byPerson = new Map<string, CatalogPhoto[]>();
+  for (const p of catalog) {
+    for (const id of p.pp ?? []) {
+      const list = byPerson.get(id);
+      if (list) list.push(p);
+      else byPerson.set(id, [p]);
+    }
+  }
+  return [...byPerson.entries()]
+    .filter(([id]) => names.has(id))
+    .map(([id, photos]) => ({ id, name: names.get(id)!, count: photos.length, coverId: pickCover(photos)! }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "he"));
+}
+
+/** All photos of one person, newest first. */
+export async function getPersonPhotos(personId: string): Promise<{ name: string; photos: Photo[] } | null> {
+  const [catalog, names] = await Promise.all([getCatalog(), getPeopleNames()]);
+  const name = names.get(personId);
+  if (!name) return null;
+  const photos = catalog.filter((p) => p.pp?.includes(personId));
+  if (photos.length === 0) return null;
+  photos.sort((a, b) => (b.t ?? "").localeCompare(a.t ?? ""));
+  return { name, photos: photos.map(strip) };
+}
+
+/** The face picture Immich made for a person (needs the person.read permission on the key). */
+export async function fetchPersonThumbnail(personId: string) {
+  if (!UUID.test(personId)) return null;
+  const { base, key } = config();
+  const res = await fetch(`${base}/api/people/${personId}/thumbnail`, {
+    headers: { "x-api-key": key },
+    cache: "no-store",
+  });
+  if (!res.ok || !res.body) return null;
+  return { body: res.body, type: res.headers.get("content-type") ?? "image/jpeg" };
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

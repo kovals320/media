@@ -141,7 +141,7 @@ The admin signs in with an existing Supabase user (email + password). There is n
 To switch the admin's email, edit the existing user's email (don't create a new user and delete the old one).
 
 **API key for the app** (Account Settings → API Keys): read-only permissions only:
-`asset.read`, `asset.view`, `library.read`, `timeline.read` (plus `library.statistics` optional). Nothing with update/delete/upload.
+`asset.read`, `asset.view`, `library.read`, `timeline.read`, `person.read` (plus `library.statistics` optional). Nothing with update/delete/upload.
 
 **Cloudflare Tunnel** (Cloudflare dashboard → Networking → Tunnels → Create tunnel, type Cloudflared):
 ```bash
@@ -156,6 +156,8 @@ Then Configure → Routes → Add published application: subdomain `photos`, dom
 2. Otherwise, a date in the file name: WhatsApp `IMG-YYYYMMDD-WA####`, Pixel `PXL_YYYYMMDD_HHMMSS`, `IMG_YYYYMMDD_HHMMSS`, screenshots...
    (WhatsApp strips EXIF, so Immich would otherwise use the copy date.) Switch: `USE_FILENAME_DATES`.
 3. Otherwise Immich's date. The year a photo appears under = the year of that date (folder only if no date).
+- **People** (face recognition): run Face Detection + Facial Recognition jobs in Immich, name people (Explore → People), hide unwanted faces.
+  Only named, non-hidden people appear. Add `person.read` to the API key for round face pictures.
 - Year covers: photos marked **favorite (heart)** in Immich; several in a year rotate daily. No heart: a fixed photo.
 - Lists cached 1 hour (tag `immich`); the admin "refresh content" button clears it.
 

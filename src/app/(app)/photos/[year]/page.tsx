@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
-import { getYearPhotos, type Photo } from "@/lib/immich";
+import { getPeopleNames, getYearPhotos, type Photo } from "@/lib/immich";
 import { YearView } from "./YearView";
 
 type Props = { params: Promise<{ year: string }>; searchParams: Promise<{ p?: string }> };
@@ -53,8 +53,22 @@ export default async function YearPage({ params, searchParams }: Props) {
           אין תמונות בשנה הזו.
         </p>
       ) : (
-        <YearView year={year} photos={photos} initialIndex={initialIndex >= 0 ? initialIndex : null} />
+        <YearView
+          photos={photos}
+          initialIndex={initialIndex >= 0 ? initialIndex : null}
+          basePath={`/photos/${year}`}
+          label={year}
+          people={await namesFor(photos)}
+        />
       )}
     </main>
   );
+}
+
+/** Names of the people who appear in these photos (for the viewer). */
+async function namesFor(photos: Photo[]) {
+  const all = await getPeopleNames().catch(() => new Map<string, string>());
+  const out: Record<string, string> = {};
+  for (const p of photos) for (const id of p.pp ?? []) if (all.has(id)) out[id] = all.get(id)!;
+  return out;
 }

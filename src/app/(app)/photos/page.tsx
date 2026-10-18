@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
-import { getYears, type YearSummary } from "@/lib/immich";
+import { getPeople, getYears, type PersonSummary, type YearSummary } from "@/lib/immich";
+import { PeopleRow } from "./PeopleRow";
 
 export const metadata = { title: "תמונות – המדיה של המשפחה" };
 
 export default async function PhotosPage() {
   let years: YearSummary[] | null = null;
+  let people: PersonSummary[] = [];
   try {
-    years = await getYears();
+    [years, people] = await Promise.all([getYears(), getPeople().catch(() => [])]);
   } catch {
     years = null;
   }
@@ -33,7 +35,10 @@ export default async function PhotosPage() {
           עוד אין כאן תמונות.
         </p>
       ) : (
-        <ul className="mt-8 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4">
+        <>
+        {people.length > 0 && <PeopleRow people={people} />}
+        {people.length > 0 && <h2 className="mt-10 font-display text-2xl sm:text-3xl">שנים</h2>}
+        <ul className={`${people.length > 0 ? "mt-4" : "mt-8"} grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4`}>
           {years.map((y) => (
             <li key={y.libraryId}>
               <Link href={`/photos/${y.year}`} className="group block rounded-2xl">
@@ -55,6 +60,7 @@ export default async function PhotosPage() {
             </li>
           ))}
         </ul>
+        </>
       )}
     </main>
   );

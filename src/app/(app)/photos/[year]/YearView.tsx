@@ -6,13 +6,17 @@ import { useOverlay } from "@/lib/useOverlay";
 
 const STEP = 240; // photos rendered per scroll step
 export function YearView({
-  year,
   photos,
   initialIndex,
+  basePath,
+  label,
+  people = {},
 }: {
-  year: string;
   photos: Photo[];
   initialIndex: number | null;
+  basePath: string; // e.g. /photos/2011 or /photos/person/<id>, used for share links
+  label: string; // e.g. "2011" or a person's name
+  people?: Record<string, string>; // person id -> name, for names in the viewer
 }) {
   const [shown, setShown] = useState(STEP);
   const [viewing, setViewing] = useState<number | null>(null);
@@ -36,11 +40,11 @@ export function YearView({
   // Opened from a shared link (/photos/2011?p=ID).
   useEffect(() => {
     if (initialIndex === null) return;
-    window.history.replaceState(null, "", `/photos/${year}`);
+    window.history.replaceState(null, "", basePath);
     setShown((n) => Math.max(n, initialIndex + 1));
     markOpened();
     setViewing(initialIndex);
-  }, [initialIndex, markOpened, year]);
+  }, [initialIndex, markOpened, basePath]);
 
   function open(i: number) {
     markOpened();
@@ -74,20 +78,32 @@ export function YearView({
       {shown < photos.length && <div ref={sentinel} className="h-24" aria-hidden />}
 
       {viewing !== null && photos[viewing] && (
-        <Viewer year={year} photos={photos} index={viewing} onIndex={setViewing} onClose={close} />
+        <Viewer
+          basePath={basePath}
+          label={label}
+          people={people}
+          photos={photos}
+          index={viewing}
+          onIndex={setViewing}
+          onClose={close}
+        />
       )}
     </>
   );
 }
 
 function Viewer({
-  year,
+  basePath,
+  label,
+  people,
   photos,
   index,
   onIndex,
   onClose,
 }: {
-  year: string;
+  basePath: string;
+  label: string;
+  people: Record<string, string>;
   photos: Photo[];
   index: number;
   onIndex: (i: number) => void;
@@ -109,15 +125,18 @@ function Viewer({
     }
   }, [index, photos]);
 
+  // Named people in this photo (from Immich's face recognition).
+  const names = (photo.pp ?? []).filter((id) => people[id]).map((id) => [id, people[id]] as const);
+
   const date = photo.t
     ? new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(photo.t))
-    : year;
+    : label;
 
   async function share() {
-    const url = `${window.location.origin}/photos/${year}?p=${photo.id}`;
+    const url = `${window.location.origin}${basePath}?p=${photo.id}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: `תמונה מ-${year}`, url });
+        await navigator.share({ title: `תמונה – ${label}`, url });
       } catch {}
       return;
     }
@@ -168,6 +187,19 @@ function Viewer({
           <p className="text-sm text-white/60">
             {index + 1} מתוך {photos.length.toLocaleString("he-IL")}
           </p>
+          {names.length > 0 && (
+            <p className="mt-1 flex flex-wrap gap-1.5">
+              {names.map(([id, name]) => (
+                <a
+                  key={id}
+                  href={`/photos/person/${id}`}
+                  className="rounded-full bg-white/10 px-2.5 py-0.5 text-sm transition-colors hover:bg-white/20"
+                >
+                  {name}
+                </a>
+              ))}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
