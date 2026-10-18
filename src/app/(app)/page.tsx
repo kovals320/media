@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getViewer } from "@/lib/auth";
 import { getYears } from "@/lib/immich";
 import { signOut } from "@/app/actions";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import { loadVideos } from "./videos/loadVideos";
 
 // Totals next to each tile; they follow the same caches as the pages
@@ -108,6 +109,7 @@ export default async function Home() {
           </span>
         </Link>
       </nav>
+      <InstallPrompt />
     </main>
   );
 }

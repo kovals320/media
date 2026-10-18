@@ -230,3 +230,11 @@ sudo cp ~/hide-deleted.sh /mnt/backup/family-media-backup/
 - For server / SSH work: **one step at a time**, wait for the output before the next step.
 - For app features: build the whole thing and report when done (don't ask at every step).
 - Tables of each project get the project's prefix (`media_` here).
+
+## 11. Installing as a phone app (PWA)
+
+- `src/app/manifest.ts` (name, icons, standalone display), icons in `public/icons/` (generated with Pillow:
+  a yellow photo tile over a blue film tile), minimal `public/sw.js` (no caching).
+- `src/components/InstallPrompt.tsx` on the home page: Android/Chrome shows an "install" button
+  (`beforeinstallprompt`); iPhone/Safari shows "Share → Add to Home Screen" (iOS has no install prompt).
+  Dismissed for 30 days (localStorage). Hidden when already running as an installed app.

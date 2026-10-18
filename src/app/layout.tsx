@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   title: "המדיה של המשפחה",
   description: "התמונות והסרטים של המשפחה במקום אחד",
   robots: { index: false, follow: false },
+  applicationName: "המדיה של המשפחה",
+  appleWebApp: { capable: true, title: "המדיה", statusBarStyle: "default" },
+  icons: {
+    icon: [{ url: "/icons/favicon-48.png", sizes: "48x48", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 export const viewport: Viewport = {
