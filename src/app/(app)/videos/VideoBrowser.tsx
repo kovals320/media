@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { yearInTitle } from "@/lib/sort";
 import type { Video } from "@/lib/youtube";
 import { useOverlay } from "@/lib/useOverlay";
@@ -20,26 +20,89 @@ function groupByYear(videos: Video[]): Group[] {
   return groups;
 }
 
+// Search ignores niqqud, punctuation, Hebrew final letters (ם/מ, ן/נ, ...) and double ו/י spellings.
+const FINALS: Record<string, string> = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
+function normalize(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[\u0591-\u05C7]/g, "")
+    .replace(/[ךםןףץ]/g, (c) => FINALS[c])
+    .replace(/['"`\u05F3\u05F4]/g, "") // באנג'י = באנגי
+    .replace(/וו/g, "ו") // מצווה = מצוה
+    .replace(/יי/g, "י") // ריקוד / רייקוד style spelling variants
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
 export function VideoBrowser({ videos, initialIndex }: { videos: Video[]; initialIndex: number | null }) {
+  const [query, setQuery] = useState("");
   const [current, setCurrent] = useState<number | null>(null);
+  // The list the player moves through: the search results at the moment a film was opened.
+  const [playing, setPlaying] = useState<Video[]>(videos);
   const { markOpened, close } = useOverlay(current !== null, () => setCurrent(null));
-  const groups = groupByYear(videos);
+
+  const index = useMemo(() => videos.map((v) => normalize(v.title)), [videos]);
+  const words = normalize(query).split(" ").filter(Boolean);
+  const shown = words.length === 0 ? videos : videos.filter((_, i) => words.every((w) => index[i].includes(w)));
+  const groups = groupByYear(shown);
 
   // Opened from a shared link (/videos?v=ID): start playing that video.
   useEffect(() => {
     if (initialIndex === null) return;
     window.history.replaceState(null, "", "/videos");
     markOpened();
+    setPlaying(videos);
     setCurrent(initialIndex);
-  }, [initialIndex, markOpened]);
+  }, [initialIndex, markOpened, videos]);
 
-  function open(index: number) {
+  function open(i: number) {
     markOpened();
-    setCurrent(index);
+    setPlaying(shown);
+    setCurrent(i);
   }
 
   return (
     <>
+      <div className="sticky top-0 z-10 -mx-5 mt-6 bg-paper/95 px-5 py-3 backdrop-blur sm:-mx-8 sm:px-8">
+        <div className="relative">
+          <svg aria-hidden viewBox="0 0 24 24" className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 fill-none stroke-muted stroke-2">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
+          </svg>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="חיפוש סרט לפי שם"
+            aria-label="חיפוש סרט לפי שם"
+            className="w-full rounded-2xl border-2 border-ink/10 bg-white py-3 pe-12 ps-12 text-lg outline-none transition-colors focus:border-lake [&::-webkit-search-cancel-button]:hidden"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="ניקוי החיפוש"
+              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted hover:bg-ink/5 hover:text-ink"
+            >
+              <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-2">
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+        </div>
+        {words.length > 0 && (
+          <p role="status" className="mt-2 text-muted">
+            {shown.length === 0 ? "לא נמצאו סרטים" : shown.length === 1 ? "נמצא סרט אחד" : `נמצאו ${shown.length} סרטים`}
+          </p>
+        )}
+      </div>
+
+      {words.length > 0 && shown.length === 0 && (
+        <p className="mt-8 rounded-[2rem] border-2 border-dashed border-lake/40 p-8 text-center text-lg text-muted">
+          אין סרט עם השם הזה. נסו מילה אחרת, או שם של אחד מבני המשפחה.
+        </p>
+      )}
+
       {groups.map((g) => (
         <section key={g.label} className="mt-10 sm:mt-12" aria-label={g.label}>
           <h2 className="mb-4 flex items-baseline gap-3">
@@ -73,7 +136,7 @@ export function VideoBrowser({ videos, initialIndex }: { videos: Video[]; initia
       ))}
 
       {current !== null && (
-        <Player videos={videos} index={current} onIndex={setCurrent} onClose={close} />
+        <Player videos={playing} index={current} onIndex={setCurrent} onClose={close} />
       )}
     </>
   );
