@@ -54,6 +54,7 @@ type SearchItem = {
   height?: number | null;
   localDateTime?: string | null;
   fileCreatedAt?: string | null;
+  fileModifiedAt?: string | null;
   originalFileName?: string | null;
   isTrashed?: boolean;
   isFavorite?: boolean;
@@ -115,6 +116,32 @@ export function dateFromFileName(name: string): string | null {
   return null;
 }
 
+const israelTime = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Jerusalem",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+/**
+ * A WhatsApp-style name gives only the day. If the file was saved on that same
+ * day (Israel time), use the file's time too, so that day's photos are in the
+ * order they were taken. If it was saved on another day, keep the name's date.
+ */
+function withFileTime(fromName: string, fileModifiedAt: string | null | undefined) {
+  if (!fileModifiedAt) return fromName;
+  const d = new Date(fileModifiedAt);
+  if (Number.isNaN(d.getTime())) return fromName;
+  const parts = Object.fromEntries(israelTime.formatToParts(d).map((x) => [x.type, x.value]));
+  const local = `${parts.year}-${parts.month}-${parts.day}`;
+  if (local !== fromName.slice(0, 10)) return fromName;
+  return `${local}T${parts.hour}:${parts.minute}:${parts.second}.000Z`;
+}
+
 function isValidDate(iso: string) {
   const t = new Date(iso);
   if (Number.isNaN(t.getTime())) return false;
@@ -140,7 +167,7 @@ const getFolderData = unstable_cache(
           // A camera wrote real capture info: trust it. Otherwise prefer the name's date.
           const hasCamera = Boolean(item.exifInfo?.make || item.exifInfo?.model);
           const fromName = item.originalFileName ? dateFromFileName(item.originalFileName) : null;
-          if (!hasCamera && fromName && isValidDate(fromName)) t = fromName;
+          if (!hasCamera && fromName && isValidDate(fromName)) t = withFileTime(fromName, item.fileModifiedAt);
         }
         // Only people given a name in Immich (and not hidden there) are shown.
         const pp: string[] = [];
@@ -166,7 +193,7 @@ const getFolderData = unstable_cache(
     }
     return { photos, names: [...names.entries()] };
   },
-  ["immich-folder-data-v8"],
+  ["immich-folder-data-v9"],
   { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
