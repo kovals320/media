@@ -304,7 +304,11 @@ export async function getPeople(): Promise<PersonSummary[]> {
   }
   return [...byPerson.entries()]
     .filter(([id]) => names.has(id))
-    .map(([id, photos]) => ({ id, name: names.get(id)!, count: photos.length, coverId: pickCover(photos)! }))
+    .map(([id, photos]) => {
+      // Until the key can read face pictures, prefer a photo of this person alone.
+      const solo = photos.filter((p) => p.pp?.length === 1);
+      return { id, name: names.get(id)!, count: photos.length, coverId: pickCover(solo.length > 0 ? solo : photos)! };
+    })
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "he"));
 }
 
