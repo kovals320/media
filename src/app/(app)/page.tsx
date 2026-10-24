@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getViewer } from "@/lib/auth";
 import { getYears } from "@/lib/immich";
-import { signOut } from "@/app/actions";
+import { AdminLinks } from "@/components/AdminLinks";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { loadVideos } from "./videos/loadVideos";
 
@@ -32,25 +31,16 @@ function Count({ n, className }: { n: number; className: string }) {
   return <span className={`text-xl font-semibold tabular-nums sm:text-2xl ${className}`}>{n.toLocaleString("he-IL")}</span>;
 }
 
-export default async function Home() {
-  const { isAdmin } = await getViewer();
+// Built ahead and served from Vercel's cache; rebuilt in the background every 10 minutes
+// (or right away with the admin's "refresh content" button).
+export const revalidate = 600;
 
+export default async function Home() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 pb-8 pt-6 sm:px-8 sm:pt-10">
       <div className="relative mb-6 flex min-h-9 flex-col items-center gap-1 sm:mb-8 sm:flex-row sm:justify-center">
         <h1 className="text-center font-display text-2xl text-ink sm:text-3xl">המדיה של המשפחה</h1>
-        {isAdmin && (
-          <div className="order-first flex items-center gap-1 self-end text-sm sm:absolute sm:left-0 sm:top-1/2 sm:order-none sm:-translate-y-1/2 sm:text-base">
-            <Link href="/admin" className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink">
-              ניהול
-            </Link>
-            <form action={signOut}>
-              <button className="rounded-full px-3 py-1.5 text-muted transition-colors hover:bg-ink/5 hover:text-ink">
-                יציאה
-              </button>
-            </form>
-          </div>
-        )}
+        <AdminLinks />
       </div>
 
 

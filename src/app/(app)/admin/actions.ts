@@ -64,6 +64,7 @@ export async function refreshFromYouTube(_: FormState): Promise<FormState> {
   updateTag(IMMICH_CACHE_TAG);
   revalidatePath("/videos");
   revalidatePath("/photos", "layout");
+  revalidatePath("/");
   const time = new Intl.DateTimeFormat("he-IL", {
     hour: "2-digit",
     minute: "2-digit",

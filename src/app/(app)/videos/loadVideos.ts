@@ -1,13 +1,13 @@
 import "server-only";
 import { cache } from "react";
-import { getViewer } from "@/lib/auth";
+import { createPublicClient } from "@/lib/supabase/public";
 import { sortByTitleYear } from "@/lib/sort";
 import { getPlaylistVideos, type Video } from "@/lib/youtube";
 
 // All videos from every playlist as one list (duplicates removed),
 // sorted by the year in the title. Shared by the page and its link preview.
 export const loadVideos = cache(async () => {
-  const { supabase } = await getViewer();
+  const supabase = createPublicClient();
   const [{ data, error }, { data: titleRows }] = await Promise.all([
     supabase.from("media_playlists").select("youtube_playlist_id").order("sort_order"),
     supabase.from("media_video_titles").select("video_id, title"),
