@@ -238,3 +238,10 @@ sudo cp ~/hide-deleted.sh /mnt/backup/family-media-backup/
 - `src/components/InstallPrompt.tsx` on the home page: Android/Chrome shows an "install" button
   (`beforeinstallprompt`); iPhone/Safari shows "Share → Add to Home Screen" (iOS has no install prompt).
   Dismissed for 30 days (localStorage). Hidden when already running as an installed app.
+
+## 12. Speed: run the server code in Frankfurt
+
+`vercel.json` sets `"regions": ["fra1"]`. Vercel's default is Washington (`iad1`), which made every
+uncached photo cross the Atlantic twice (Israel → US → home server in Israel → US → Israel), and every
+Supabase call (project in Frankfurt, eu-central-1) cross it once. Check with the `x-vercel-id` response
+header: it should read `fra1::fra1::...`.
