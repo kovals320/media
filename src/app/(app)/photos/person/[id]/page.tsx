@@ -48,7 +48,7 @@ export default async function PersonPage({ params, searchParams }: Props) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/api/person/${id}`}
+          src={`/api/person/${id}?v=2`}
           alt=""
           className="h-16 w-16 rounded-full bg-sun/30 object-cover sm:h-20 sm:w-20"
           style={{ backgroundImage: `url(/api/photo/${person.photos[0].id}/thumb)`, backgroundSize: "cover" }}

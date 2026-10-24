@@ -6,7 +6,7 @@ import type { PersonSummary } from "@/lib/immich";
 
 function Face({ person }: { person: PersonSummary }) {
   // Immich's face picture; if it can't be loaded, one of the person's photos.
-  const [src, setSrc] = useState(`/api/person/${person.id}`);
+  const [src, setSrc] = useState(`/api/person/${person.id}?v=2`);
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
