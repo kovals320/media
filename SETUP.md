@@ -145,7 +145,7 @@ To switch the admin's email, edit the existing user's email (don't create a new 
 
 **Cloudflare Tunnel** (Cloudflare dashboard → Networking → Tunnels → Create tunnel, type Cloudflared):
 ```bash
-sudo docker run -d --name cloudflared --restart unless-stopped cloudflare/cloudflared:latest \
+sudo docker run -d --name cloudflared --restart unless-stopped cloudflare/cloudflared:2026.10.3 \
   tunnel --no-autoupdate run --token <token from the Cloudflare page>
 ```
 Then Configure → Routes → Add published application: subdomain `photos`, domain `<domain>`, service `http://192.168.1.253:2283`.
@@ -245,3 +245,19 @@ sudo cp ~/hide-deleted.sh /mnt/backup/family-media-backup/
 uncached photo cross the Atlantic twice (Israel → US → home server in Israel → US → Israel), and every
 Supabase call (project in Frankfurt, eu-central-1) cross it once. Check with the `x-vercel-id` response
 header: it should read `fra1::fra1::...`.
+
+## 13. Upgrading cloudflared (the tunnel)
+
+The container is pinned to a version (it does not update itself). When Cloudflare asks for an upgrade
+(e.g. Oct 2026: 2026.10.1 → 2026.10.3 for the compromised eMudhra certificates), on the Immich server:
+```bash
+sudo docker exec cloudflared cloudflared --version            # current version
+sudo docker pull cloudflare/cloudflared:<new version>
+TOKEN=$(sudo docker inspect cloudflared --format '{{json .Args}}' | python3 -c 'import json,sys; a=json.load(sys.stdin); print(a[a.index("--token")+1])')
+echo "token length: ${#TOKEN}"                                # same SSH window for the next lines
+sudo docker rename cloudflared cloudflared-old && sudo docker stop cloudflared-old
+sudo docker run -d --name cloudflared --restart unless-stopped cloudflare/cloudflared:<new version> tunnel --no-autoupdate run --token "$TOKEN"
+sudo docker logs --tail 5 cloudflared                         # then check /api/health shows immich connected
+sudo docker rm cloudflared-old
+```
+The origin is plain HTTP (192.168.1.253:2283), so certificate changes on HTTPS origins don't apply.
