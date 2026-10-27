@@ -261,3 +261,21 @@ sudo docker logs --tail 5 cloudflared                         # then check /api/
 sudo docker rm cloudflared-old
 ```
 The origin is plain HTTP (192.168.1.253:2283), so certificate changes on HTTPS origins don't apply.
+
+## 14. Keeping the server up to date (monthly routine)
+
+On the Immich server (SSH):
+```bash
+# 1. Ubuntu + Docker
+sudo apt update && sudo apt upgrade -y
+ls /var/run/reboot-required 2>/dev/null && echo "REBOOT NEEDED" || echo "no reboot needed"
+# 2. Immich (server + machine learning use the "release" tag; redis/postgres stay pinned)
+cd ~/immich-app && sudo docker compose pull && sudo docker compose up -d
+sudo docker compose ps          # wait until immich_server is (healthy), 1-2 minutes
+# 3. cloudflared: see section 13 (pinned version, upgrade when Cloudflare asks)
+# 4. Optional: free space from old images
+sudo docker image prune -f
+```
+Check: `https://photos.<domain>/api/server/version` and `https://<site>/api/health`.
+Before upgrading Immich across a major version, read its release notes for breaking changes.
+Oct 27, 2026: Immich v3.3.3 → v3.3.5 (CA compromise fix), cloudflared 2026.10.1 → 2026.10.3, apt upgrade, no reboot needed.
