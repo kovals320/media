@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { yearInTitle } from "@/lib/sort";
 import type { Video } from "@/lib/youtube";
 import { useOverlay } from "@/lib/useOverlay";
+import { normalize } from "@/lib/search";
 
 type Group = { label: string; items: { video: Video; index: number }[] };
 
@@ -18,20 +19,6 @@ function groupByYear(videos: Video[]): Group[] {
     else groups.push({ label, items: [{ video, index }] });
   });
   return groups;
-}
-
-// Search ignores niqqud, punctuation, Hebrew final letters (ם/מ, ן/נ, ...) and double ו/י spellings.
-const FINALS: Record<string, string> = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
-function normalize(text: string) {
-  return text
-    .toLowerCase()
-    .replace(/[\u0591-\u05C7]/g, "")
-    .replace(/[ךםןףץ]/g, (c) => FINALS[c])
-    .replace(/['"`\u05F3\u05F4]/g, "") // באנג'י = באנגי
-    .replace(/וו/g, "ו") // מצווה = מצוה
-    .replace(/יי/g, "י") // ריקוד / רייקוד style spelling variants
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
 }
 
 export function VideoBrowser({ videos, initialIndex }: { videos: Video[]; initialIndex: number | null }) {
