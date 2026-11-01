@@ -63,11 +63,12 @@ async function checkImmich() {
 // The optional write key used to save approved face names (not required for the app to work).
 async function checkTagging() {
   const base = process.env.IMMICH_URL?.replace(/\/$/, "");
-  const key = process.env.IMMICH_TAG_API_KEY;
+  const key = process.env.IMMICH_TAG_API_KEY?.trim().replace(/^["']|["']$/g, "");
   if (!key) return "not set up";
   try {
     const res = await fetch(`${base}/api/people?size=1`, { headers: { "x-api-key": key }, cache: "no-store" });
-    return res.ok ? "connected" : `status ${res.status}`;
+    // Length only (never the key), to spot a wrong value pasted into Vercel.
+    return res.ok ? "connected" : `status ${res.status} (key length ${key.length})`;
   } catch {
     return "unreachable";
   }

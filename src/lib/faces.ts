@@ -19,7 +19,7 @@ export type Face = {
 
 function tagConfig() {
   const base = process.env.IMMICH_URL?.replace(/\/$/, "");
-  const key = process.env.IMMICH_TAG_API_KEY;
+  const key = process.env.IMMICH_TAG_API_KEY?.trim().replace(/^["']|["']$/g, "");
   if (!base || !key) return null;
   return { base, key };
 }
