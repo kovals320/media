@@ -1,7 +1,10 @@
 import { BackLink } from "@/components/BackLink";
 import { requireAdmin } from "@/lib/auth";
 import { getFolderMismatches, type FolderMismatch } from "@/lib/immich";
-import { AddPlaylistForm, RefreshYouTubeButton, RemoveButton, VideoTitleForm } from "./Forms";
+import { AddPlaylistForm, RefreshYouTubeButton, RemoveButton, SuggestionDecision, VideoTitleForm } from "./Forms";
+import { taggingEnabled } from "@/lib/faces";
+import { faceCropStyle } from "@/lib/faceCrop";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { removePlaylist, removeVideoTitle } from "./actions";
 import { loadVideos } from "../videos/loadVideos";
 import { yearInTitle } from "@/lib/sort";
@@ -21,6 +24,8 @@ export default async function AdminPage() {
     <main className="mx-auto w-full max-w-3xl px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
       <BackLink />
       <h1 className="font-display text-[2.6rem] leading-[1.05] sm:text-6xl">ניהול</h1>
+
+      <FaceSuggestions supabase={supabase} />
 
       <section className="mt-10" aria-labelledby="playlists-h">
         <h2 id="playlists-h" className="font-display text-2xl sm:text-3xl">פלייליסטים ביוטיוב</h2>
@@ -177,6 +182,97 @@ async function VideoTitlesSection() {
             ))}
           </ul>
         </>
+      )}
+    </section>
+  );
+}
+
+type SuggestionRow = {
+  id: string;
+  asset_id: string;
+  name: string;
+  current_name: string | null;
+  suggested_by: string | null;
+  box: number[];
+  aspect: number;
+  status: string;
+  result: string | null;
+  created_at: string;
+};
+
+const when = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+
+async function FaceSuggestions({ supabase }: { supabase: SupabaseClient }) {
+  const cols = "id, asset_id, name, current_name, suggested_by, box, aspect, status, result, created_at";
+  const [{ data: pending }, { data: recent }] = await Promise.all([
+    supabase.from("media_face_suggestions").select(cols).eq("status", "pending").order("created_at").limit(100),
+    supabase.from("media_face_suggestions").select(cols).neq("status", "pending").order("decided_at", { ascending: false }).limit(8),
+  ]);
+  const rows = (pending ?? []) as SuggestionRow[];
+  const done = (recent ?? []) as SuggestionRow[];
+  const enabled = taggingEnabled();
+
+  const Face = ({ r }: { r: SuggestionRow }) => (
+    <a
+      href={`${process.env.IMMICH_PUBLIC_URL ?? "https://photos.dorh.fyi"}/photos/${r.asset_id}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="פתיחת התמונה ב-Immich"
+      className="block h-16 w-16 shrink-0 rounded-full bg-sun/20 ring-2 ring-sun/60 sm:h-20 sm:w-20"
+      style={faceCropStyle(`/api/photo/${r.asset_id}/full`, r.box, r.aspect)}
+    />
+  );
+
+  return (
+    <section className="mt-10" aria-labelledby="faces-h">
+      <h2 id="faces-h" className="font-display text-2xl sm:text-3xl">
+        הצעות לתיוג פנים{rows.length > 0 ? ` (${rows.length})` : ""}
+      </h2>
+      <p className="mt-1 text-muted">
+        מבקרים מציעים שמות לפנים בתמונות (כפתור &quot;תיוג&quot; בתמונה פתוחה). שום דבר לא משתנה ב-Immich עד שתאשרו. אפשר לתקן
+        את השם לפני האישור. פנים שעוד אין להן שם: כל התמונות של אותן פנים יקבלו את השם.
+      </p>
+      {!enabled && (
+        <p className="mt-4 rounded-2xl bg-red-50 p-4 text-red-800">
+          התיוג עוד לא פעיל: צריך להוסיף ב-Vercel את המשתנה IMMICH_TAG_API_KEY (מפתח Immich עם הרשאות כתיבה לאנשים ולפנים).
+        </p>
+      )}
+      {rows.length === 0 ? (
+        <p className="mt-4 rounded-2xl bg-lake/10 p-4 text-lake-deep">אין הצעות שמחכות לאישור.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-ink/10 rounded-2xl bg-white">
+          {rows.map((r) => (
+            <li key={r.id} className="flex gap-3 px-4 py-3">
+              <Face r={r} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-muted">
+                  {r.current_name ? `כרגע: ${r.current_name}` : "כרגע: בלי שם"} · הוצע {r.suggested_by ? `ע״י ${r.suggested_by} ` : ""}
+                  {when.format(new Date(r.created_at))}
+                </p>
+                <SuggestionDecision id={r.id} name={r.name} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {done.length > 0 && (
+        <details className="mt-3 rounded-2xl bg-white">
+          <summary className="cursor-pointer list-none px-4 py-3 font-semibold">החלטות אחרונות</summary>
+          <ul className="divide-y divide-ink/10 px-4 pb-3">
+            {done.map((r) => (
+              <li key={r.id} className="flex items-center gap-3 py-2">
+                <Face r={r} />
+                <p className="min-w-0 text-sm">
+                  <span className="font-semibold">{r.name}</span>{" "}
+                  <span className={r.status === "approved" ? "text-lake-deep" : "text-red-700"}>
+                    {r.status === "approved" ? "אושר" : "נדחה"}
+                  </span>
+                  {r.result ? <span className="block text-muted">{r.result}</span> : null}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </section>
   );

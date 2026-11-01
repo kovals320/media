@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
+import { applyName } from "@/lib/faces";
 import { IMMICH_CACHE_TAG } from "@/lib/immich";
 import { getPlaylistInfo, YOUTUBE_CACHE_TAG } from "@/lib/youtube";
 
@@ -106,4 +107,56 @@ export async function removeVideoTitle(videoId: string) {
   if (!VIDEO_ID.test(videoId)) return;
   await supabase.from("media_video_titles").delete().eq("video_id", videoId);
   refreshVideoPages();
+}
+
+// ---- Face name suggestions ----
+
+/** Approves a suggested name (possibly corrected by the admin) and writes it into Immich. */
+export async function approveSuggestion(id: string, _: FormState, formData: FormData): Promise<FormState> {
+  const { supabase } = await requireAdmin();
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ");
+  if (!name || name.length > 60) return { error: "צריך שם (עד 60 תווים).", ok: null };
+
+  const { data: row } = await supabase
+    .from("media_face_suggestions")
+    .select("id, asset_id, face_id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!row || row.status !== "pending") return { error: "ההצעה הזו כבר טופלה.", ok: null };
+
+  let result: string;
+  try {
+    result = await applyName(row.asset_id as string, row.face_id as string, name);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.includes("IMMICH_TAG_API_KEY")) return { error: "חסר מפתח הכתיבה של Immich (IMMICH_TAG_API_KEY) ב-Vercel.", ok: null };
+    if (/: 40[13] /.test(msg)) return { error: "למפתח של Immich אין הרשאה לשנות אנשים. בדקו את ההרשאות שלו.", ok: null };
+    return { error: msg.startsWith("Immich") ? "שרת התמונות לא הצליח לשמור. נסו שוב." : msg || "משהו השתבש. נסו שוב.", ok: null };
+  }
+
+  await supabase
+    .from("media_face_suggestions")
+    .update({ status: "approved", name, result, decided_at: new Date().toISOString() })
+    .eq("id", id);
+  // Other pending suggestions for the same face are now settled too.
+  await supabase
+    .from("media_face_suggestions")
+    .update({ status: "rejected", result: "הוצע שם אחר שאושר", decided_at: new Date().toISOString() })
+    .eq("face_id", row.face_id as string)
+    .eq("status", "pending");
+
+  updateTag(IMMICH_CACHE_TAG);
+  revalidatePath("/photos", "layout");
+  revalidatePath("/admin");
+  return { error: null, ok: result };
+}
+
+export async function rejectSuggestion(id: string) {
+  const { supabase } = await requireAdmin();
+  await supabase
+    .from("media_face_suggestions")
+    .update({ status: "rejected", decided_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "pending");
+  revalidatePath("/admin");
 }

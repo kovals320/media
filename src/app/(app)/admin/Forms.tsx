@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useTransition } from "react";
-import { addPlaylist, refreshFromYouTube, setVideoTitle, type FormState } from "./actions";
+import { addPlaylist, approveSuggestion, refreshFromYouTube, rejectSuggestion, setVideoTitle, type FormState } from "./actions";
 
 const initial: FormState = { error: null, ok: null };
 const inputClass =
@@ -90,6 +90,36 @@ export function VideoTitleForm({
       />
       <button disabled={pending} className="rounded-2xl bg-ink px-4 py-2 font-semibold text-white disabled:opacity-60">
         {pending ? "שומר…" : "שמירה"}
+      </button>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+export function SuggestionDecision({ id, name }: { id: string; name: string }) {
+  const [state, action, pending] = useActionState(approveSuggestion.bind(null, id), initial);
+  const [rejecting, startReject] = useTransition();
+  if (state.ok) return <Feedback state={state} />;
+  return (
+    <form action={action} className="mt-2 flex flex-wrap gap-2">
+      <input
+        name="name"
+        defaultValue={name}
+        required
+        maxLength={60}
+        aria-label="השם שיישמר"
+        className={`${inputClass} flex-[1_1_10rem] py-2 text-base`}
+      />
+      <button disabled={pending || rejecting} className="rounded-2xl bg-lake px-4 py-2 font-semibold text-white hover:bg-lake-deep disabled:opacity-60">
+        {pending ? "שומר…" : "אישור"}
+      </button>
+      <button
+        type="button"
+        disabled={pending || rejecting}
+        onClick={() => startReject(() => rejectSuggestion(id))}
+        className="rounded-2xl px-4 py-2 font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+      >
+        {rejecting ? "דוחה…" : "דחייה"}
       </button>
       <Feedback state={state} />
     </form>

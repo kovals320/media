@@ -60,8 +60,26 @@ async function checkImmich() {
   }
 }
 
+// The optional write key used to save approved face names (not required for the app to work).
+async function checkTagging() {
+  const base = process.env.IMMICH_URL?.replace(/\/$/, "");
+  const key = process.env.IMMICH_TAG_API_KEY;
+  if (!key) return "not set up";
+  try {
+    const res = await fetch(`${base}/api/people?size=1`, { headers: { "x-api-key": key }, cache: "no-store" });
+    return res.ok ? "connected" : `status ${res.status}`;
+  } catch {
+    return "unreachable";
+  }
+}
+
 export async function GET() {
-  const [supabase, youtube, immich] = await Promise.all([checkSupabase(), checkYouTube(), checkImmich()]);
+  const [supabase, youtube, immich, tagging] = await Promise.all([
+    checkSupabase(),
+    checkYouTube(),
+    checkImmich(),
+    checkTagging(),
+  ]);
   const ok = supabase === "connected" && youtube.status === "connected" && immich === "connected";
-  return NextResponse.json({ ok, supabase, youtube, immich }, { status: ok ? 200 : 502 });
+  return NextResponse.json({ ok, supabase, youtube, immich, tagging }, { status: ok ? 200 : 502 });
 }

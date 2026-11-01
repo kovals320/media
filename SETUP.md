@@ -279,3 +279,36 @@ sudo docker image prune -f
 Check: `https://photos.<domain>/api/server/version` and `https://<site>/api/health`.
 Before upgrading Immich across a major version, read its release notes for breaking changes.
 Oct 27, 2026: Immich v3.3.3 → v3.3.5 (CA compromise fix), cloudflared 2026.10.1 → 2026.10.3, apt upgrade, no reboot needed.
+
+## 15. Face tagging by visitors (suggestions the admin approves)
+
+- In an open photo, the "תיוג" button shows frames around the faces Immich found. Tapping a face lets anyone suggest a name (optionally with their own name).
+- Suggestions go to Supabase table `media_face_suggestions` (anyone may insert a pending row; only the admin can read, approve or reject).
+- The admin page lists them at the top. Approving writes into Immich:
+  - face in an unnamed group → the whole group gets the name, or is merged into the person who already has that name;
+  - face already named as someone else → only that face moves to the right person (created if new).
+- Needs a second Immich API key in Vercel as `IMMICH_TAG_API_KEY` with: `asset.read`, `face.read`, `face.update`, `person.read`, `person.create`, `person.update`, `person.merge`. The main `IMMICH_API_KEY` stays read-only. `/api/health` shows `"tagging": "connected"` when it works.
+
+SQL (already applied):
+```sql
+create table public.media_face_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  asset_id uuid not null, face_id uuid not null, person_id uuid, current_name text,
+  name text not null check (char_length(btrim(name)) between 1 and 60),
+  suggested_by text check (suggested_by is null or char_length(suggested_by) <= 40),
+  box real[] not null check (array_length(box, 1) = 4),
+  aspect real not null check (aspect > 0 and aspect < 20),
+  status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  result text, created_at timestamptz not null default now(), decided_at timestamptz
+);
+create unique index media_face_suggestions_pending_uniq on public.media_face_suggestions (face_id, lower(btrim(name))) where status = 'pending';
+create index media_face_suggestions_status_idx on public.media_face_suggestions (status, created_at);
+alter table public.media_face_suggestions enable row level security;
+create policy "anyone can suggest" on public.media_face_suggestions for insert to anon, authenticated
+  with check (status = 'pending' and decided_at is null and result is null);
+create policy "admin reads" on public.media_face_suggestions for select to authenticated using (public.media_is_admin());
+create policy "admin decides" on public.media_face_suggestions for update to authenticated using (public.media_is_admin()) with check (public.media_is_admin());
+create policy "admin deletes" on public.media_face_suggestions for delete to authenticated using (public.media_is_admin());
+grant insert on public.media_face_suggestions to anon, authenticated;
+grant select, update, delete on public.media_face_suggestions to authenticated;
+```
