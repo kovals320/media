@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useOverlay } from "@/lib/useOverlay";
+import { faceCropStyle } from "@/lib/faceCrop";
+
+type Sample = { id: string; box?: number[]; aspect?: number };
 
 const STEP = 60; // faces rendered per scroll step
 const BY_KEY = "media-suggested-by";
@@ -101,7 +104,8 @@ function SuggestSheet({
   onSent: (name: string) => void;
   onClose: () => void;
 }) {
-  const [photos, setPhotos] = useState<string[] | null>(null);
+  const [photos, setPhotos] = useState<Sample[] | null>(null);
+  const [big, setBig] = useState<string | null>(null); // a sample shown whole
   const [name, setName] = useState("");
   const [by, setBy] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done" | "error">(sentName ? "done" : "idle");
@@ -113,7 +117,7 @@ function SuggestSheet({
     let alive = true;
     fetch(`/api/person/${personId}/photos`)
       .then((r) => r.json())
-      .then((d) => alive && setPhotos(d.ids ?? []))
+      .then((d) => alive && setPhotos(d.photos ?? []))
       .catch(() => alive && setPhotos([]));
     return () => {
       alive = false;
@@ -167,17 +171,35 @@ function SuggestSheet({
           </button>
         </div>
 
-        <p className="mt-4 text-sm font-semibold text-muted">מהתמונות:</p>
-        <ul className="mt-1.5 grid grid-cols-3 gap-1.5">
-          {(photos ?? Array.from({ length: 3 }, () => "")).map((id, i) => (
-            <li key={id || i} className="aspect-square overflow-hidden rounded-lg bg-sun/20">
-              {id && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={`/api/photo/${id}/thumb`} alt="" loading="lazy" className="h-full w-full object-cover" />
-              )}
-            </li>
-          ))}
-        </ul>
+        <p className="mt-4 text-sm font-semibold text-muted">מהתמונות (לחיצה מציגה את התמונה המלאה):</p>
+        {big ? (
+          <button type="button" onClick={() => setBig(null)} className="mt-1.5 block w-full" aria-label="חזרה">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/photo/${big}/full`} alt="" className="max-h-[50dvh] w-full rounded-lg bg-sun/20 object-contain" />
+            <span className="mt-1 block text-sm text-muted">לחיצה לחזרה</span>
+          </button>
+        ) : (
+          <ul className="mt-1.5 grid grid-cols-3 gap-1.5">
+            {(photos ?? Array.from({ length: 3 }, (): Sample => ({ id: "" }))).map((p, i) => (
+              <li key={p.id || i} className="aspect-square overflow-hidden rounded-lg bg-sun/20">
+                {p.id && (
+                  <button
+                    type="button"
+                    onClick={() => setBig(p.id)}
+                    aria-label="הצגת התמונה המלאה"
+                    className="block h-full w-full"
+                    style={p.box && p.aspect ? faceCropStyle(`/api/photo/${p.id}/full`, p.box, p.aspect, 3.2) : undefined}
+                  >
+                    {!(p.box && p.aspect) && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/api/photo/${p.id}/thumb`} alt="" loading="lazy" className="h-full w-full object-cover" />
+                    )}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
 
         {status === "done" ? (
           <div className="mt-5 flex items-center justify-between gap-3">
