@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
-import { getPeople, getYears, type PersonSummary, type YearSummary } from "@/lib/immich";
+import { getPeople, getUnnamedPeople, getYears, type PersonSummary, type YearSummary } from "@/lib/immich";
 import { PeopleRow } from "./PeopleRow";
 
 export const metadata = { title: "תמונות – המדיה של המשפחה" };
@@ -8,8 +8,13 @@ export const metadata = { title: "תמונות – המדיה של המשפחה"
 export default async function PhotosPage() {
   let years: YearSummary[] | null = null;
   let people: PersonSummary[] = [];
+  let unnamed: string[] = [];
   try {
-    [years, people] = await Promise.all([getYears(), getPeople().catch(() => [])]);
+    [years, people, unnamed] = await Promise.all([
+      getYears(),
+      getPeople().catch(() => []),
+      getUnnamedPeople().catch(() => []),
+    ]);
   } catch {
     years = null;
   }
@@ -37,6 +42,26 @@ export default async function PhotosPage() {
       ) : (
         <>
         {people.length > 0 && <PeopleRow people={people} />}
+        {unnamed.length > 0 && (
+          <Link
+            href="/photos/who"
+            className="group mt-5 flex items-center gap-4 rounded-2xl bg-sun/25 px-4 py-3 transition-colors hover:bg-sun/40"
+          >
+            <span aria-hidden className="flex shrink-0 -space-x-3 space-x-reverse">
+              {unnamed.slice(0, 4).map((id) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={id} src={`/api/person/${id}?v=2`} alt="" loading="lazy" className="h-11 w-11 rounded-full bg-sun/40 object-cover ring-2 ring-paper" />
+              ))}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold">מכירים את הפנים האלה?</span>
+              <span className="block text-sm text-muted">{unnamed.length.toLocaleString("he-IL")} פנים מחכות לשם. עזרו לתייג</span>
+            </span>
+            <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 shrink-0 fill-none stroke-current stroke-2 text-muted transition-transform group-hover:-translate-x-1">
+              <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+        )}
         {people.length > 0 && <h2 className="mt-10 font-display text-2xl sm:text-3xl">שנים</h2>}
         <ul className={`${people.length > 0 ? "mt-4" : "mt-8"} grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-5 lg:grid-cols-4`}>
           {years.map((y) => (

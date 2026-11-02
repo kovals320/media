@@ -189,12 +189,13 @@ async function VideoTitlesSection() {
 
 type SuggestionRow = {
   id: string;
-  asset_id: string;
+  asset_id: string | null;
+  person_id: string | null;
   name: string;
   current_name: string | null;
   suggested_by: string | null;
-  box: number[];
-  aspect: number;
+  box: number[] | null;
+  aspect: number | null;
   status: string;
   result: string | null;
   created_at: string;
@@ -203,7 +204,7 @@ type SuggestionRow = {
 const when = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 
 async function FaceSuggestions({ supabase }: { supabase: SupabaseClient }) {
-  const cols = "id, asset_id, name, current_name, suggested_by, box, aspect, status, result, created_at";
+  const cols = "id, asset_id, person_id, name, current_name, suggested_by, box, aspect, status, result, created_at";
   const [{ data: pending }, { data: recent }] = await Promise.all([
     supabase.from("media_face_suggestions").select(cols).eq("status", "pending").order("created_at").limit(100),
     supabase.from("media_face_suggestions").select(cols).neq("status", "pending").order("decided_at", { ascending: false }).limit(8),
@@ -212,16 +213,29 @@ async function FaceSuggestions({ supabase }: { supabase: SupabaseClient }) {
   const done = (recent ?? []) as SuggestionRow[];
   const enabled = taggingEnabled();
 
-  const Face = ({ r }: { r: SuggestionRow }) => (
-    <a
-      href={`${process.env.IMMICH_PUBLIC_URL ?? "https://photos.dorh.fyi"}/photos/${r.asset_id}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      title="פתיחת התמונה ב-Immich"
-      className="block h-16 w-16 shrink-0 rounded-full bg-sun/20 ring-2 ring-sun/60 sm:h-20 sm:w-20"
-      style={faceCropStyle(`/api/photo/${r.asset_id}/full`, r.box, r.aspect)}
-    />
-  );
+  const immichUrl = process.env.IMMICH_PUBLIC_URL ?? "https://photos.dorh.fyi";
+  const Face = ({ r }: { r: SuggestionRow }) => {
+    const ring = "block h-16 w-16 shrink-0 rounded-full bg-sun/20 ring-2 ring-sun/60 sm:h-20 sm:w-20";
+    // A whole face group: its face picture, linking to the group in Immich.
+    if (!r.asset_id || !r.box || !r.aspect) {
+      return (
+        <a href={`${immichUrl}/people/${r.person_id}`} target="_blank" rel="noopener noreferrer" title="פתיחה ב-Immich" className={ring}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/api/person/${r.person_id}?v=2`} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
+        </a>
+      );
+    }
+    return (
+      <a
+        href={`${immichUrl}/photos/${r.asset_id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="פתיחת התמונה ב-Immich"
+        className={ring}
+        style={faceCropStyle(`/api/photo/${r.asset_id}/full`, r.box, r.aspect)}
+      />
+    );
+  };
 
   return (
     <section className="mt-10" aria-labelledby="faces-h">
@@ -246,7 +260,8 @@ async function FaceSuggestions({ supabase }: { supabase: SupabaseClient }) {
               <Face r={r} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-muted">
-                  {r.current_name ? `כרגע: ${r.current_name}` : "כרגע: בלי שם"} · הוצע {r.suggested_by ? `ע״י ${r.suggested_by} ` : ""}
+                  {r.current_name ? `כרגע: ${r.current_name}` : "כרגע: בלי שם"}
+                  {!r.asset_id ? " · לכל התמונות של הפנים" : ""} · הוצע {r.suggested_by ? `ע״י ${r.suggested_by} ` : ""}
                   {when.format(new Date(r.created_at))}
                 </p>
                 <SuggestionDecision id={r.id} name={r.name} />

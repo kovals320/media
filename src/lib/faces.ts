@@ -128,3 +128,25 @@ export async function applyName(assetId: string, faceId: string, rawName: string
     ? `הפנים בתמונה הזו הועברו מ${currentName} ל${name}.`
     : `הפנים בתמונה הזו תויגו בשם ${name}.`;
 }
+
+/** Writes an approved name for a whole face group (suggested on the "who is this?" page). */
+export async function applyPersonName(personId: string, rawName: string): Promise<string> {
+  const name = rawName.trim().replace(/\s+/g, " ");
+  let person: ImmichPerson;
+  try {
+    person = await call<ImmichPerson>(`/api/people/${personId}`);
+  } catch {
+    throw new Error("קבוצת הפנים הזו כבר לא קיימת בשרת התמונות (אולי אוחדה עם מישהו אחר).");
+  }
+  const currentName = person.name?.trim() ?? "";
+  if (nameKey(currentName) === nameKey(name)) return `כבר מתויג/ת בשם ${name}.`;
+  if (currentName) throw new Error(`בינתיים קיבלו הפנים האלה את השם ${currentName}. כדי לשנות, עשו זאת ב-Immich.`);
+
+  const existing = (await namedPeople()).get(nameKey(name));
+  if (existing && existing.id !== person.id) {
+    await call(`/api/people/${existing.id}/merge`, { method: "POST", body: { ids: [person.id] } });
+    return `כל התמונות של הפנים האלה צורפו ל${name}.`;
+  }
+  await call(`/api/people/${person.id}`, { method: "PUT", body: { name } });
+  return `כל התמונות של הפנים האלה תויגו בשם ${name}.`;
+}

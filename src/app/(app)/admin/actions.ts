@@ -2,7 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { applyName } from "@/lib/faces";
+import { applyName, applyPersonName } from "@/lib/faces";
 import { IMMICH_CACHE_TAG } from "@/lib/immich";
 import { getPlaylistInfo, YOUTUBE_CACHE_TAG } from "@/lib/youtube";
 
@@ -119,14 +119,16 @@ export async function approveSuggestion(id: string, _: FormState, formData: Form
 
   const { data: row } = await supabase
     .from("media_face_suggestions")
-    .select("id, asset_id, face_id, status")
+    .select("id, asset_id, face_id, person_id, status")
     .eq("id", id)
     .maybeSingle();
   if (!row || row.status !== "pending") return { error: "ההצעה הזו כבר טופלה.", ok: null };
 
   let result: string;
   try {
-    result = await applyName(row.asset_id as string, row.face_id as string, name);
+    result = row.face_id
+      ? await applyName(row.asset_id as string, row.face_id as string, name)
+      : await applyPersonName(row.person_id as string, name);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
     if (msg.includes("IMMICH_TAG_API_KEY")) return { error: "חסר מפתח הכתיבה של Immich (IMMICH_TAG_API_KEY) ב-Vercel.", ok: null };
@@ -138,12 +140,12 @@ export async function approveSuggestion(id: string, _: FormState, formData: Form
     .from("media_face_suggestions")
     .update({ status: "approved", name, result, decided_at: new Date().toISOString() })
     .eq("id", id);
-  // Other pending suggestions for the same face are now settled too.
-  await supabase
+  // Other pending suggestions for the same face (or face group) are now settled too.
+  const others = supabase
     .from("media_face_suggestions")
     .update({ status: "rejected", result: "הוצע שם אחר שאושר", decided_at: new Date().toISOString() })
-    .eq("face_id", row.face_id as string)
     .eq("status", "pending");
+  await (row.face_id ? others.eq("face_id", row.face_id as string) : others.eq("person_id", row.person_id as string).is("face_id", null));
 
   updateTag(IMMICH_CACHE_TAG);
   revalidatePath("/photos", "layout");

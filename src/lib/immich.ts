@@ -348,3 +348,45 @@ export async function fetchPhotoImage(id: string, size: "thumbnail" | "preview")
   if (!res.ok || !res.body) return null;
   return { body: res.body, type: res.headers.get("content-type") ?? "image/jpeg" };
 }
+
+type ImmichPersonRow = { id: string; name?: string | null; isHidden?: boolean };
+
+/**
+ * Face groups Immich found but nobody has named yet (people hidden in Immich are
+ * left out), in Immich's own order: the groups with the most photos first.
+ */
+export const getUnnamedPeople = unstable_cache(
+  async (): Promise<string[]> => {
+    const ids: string[] = [];
+    for (let page = 1; page < 50; page++) {
+      const res = await immich<{ people: ImmichPersonRow[]; hasNextPage?: boolean }>(
+        `/api/people?size=1000&page=${page}&withHidden=false`,
+      );
+      for (const p of res.people) if (!p.isHidden && !p.name?.trim()) ids.push(p.id);
+      if (!res.hasNextPage || res.people.length === 0) break;
+    }
+    return ids;
+  },
+  ["immich-unnamed-people-v1"],
+  { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
+);
+
+/** One person as Immich has it now (null if not found). */
+export async function getImmichPerson(personId: string): Promise<ImmichPersonRow | null> {
+  if (!UUID.test(personId)) return null;
+  try {
+    return await immich<ImmichPersonRow>(`/api/people/${personId}`);
+  } catch {
+    return null;
+  }
+}
+
+/** A few photos of a face group, to help recognise who it is. */
+export async function getPersonSamplePhotos(personId: string, count = 6): Promise<string[]> {
+  if (!UUID.test(personId)) return [];
+  const res = await immich<SearchResponse>("/api/search/metadata", {
+    method: "POST",
+    body: { personIds: [personId], type: "IMAGE", size: count * 2, page: 1 },
+  });
+  return res.assets.items.filter(visible).slice(0, count).map((a) => a.id);
+}
