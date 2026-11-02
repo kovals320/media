@@ -312,3 +312,20 @@ create policy "admin deletes" on public.media_face_suggestions for delete to aut
 grant insert on public.media_face_suggestions to anon, authenticated;
 grant select, update, delete on public.media_face_suggestions to authenticated;
 ```
+
+## 16. "Who is this?" page (/photos/who)
+
+- Lists every face group Immich found that has no name and isn't hidden (Immich's order: most photos first). Linked from the Photos page ("מכירים את הפנים האלה?").
+- Tapping a face shows a few of its photos (cropped to the face; tap for the whole photo) and a form to suggest a name for the whole group.
+- These suggestions are rows in `media_face_suggestions` with `person_id` set and no `face_id`. Approving names the group in Immich, or merges it into the person who already has that name.
+- SQL added:
+```sql
+alter table public.media_face_suggestions
+  alter column asset_id drop not null, alter column face_id drop not null,
+  alter column box drop not null, alter column aspect drop not null;
+alter table public.media_face_suggestions add constraint media_face_suggestions_target check (
+  (face_id is not null and asset_id is not null and box is not null and aspect is not null)
+  or (face_id is null and person_id is not null));
+create unique index media_face_suggestions_pending_person_uniq
+  on public.media_face_suggestions (person_id, lower(btrim(name))) where status = 'pending' and face_id is null;
+```
