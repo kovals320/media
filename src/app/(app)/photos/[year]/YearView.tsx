@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Photo } from "@/lib/immich";
 import { useOverlay } from "@/lib/useOverlay";
 import { FaceTagger } from "./FaceTagger";
+import { NewLabel } from "@/components/WhatsNew";
+import { useSince } from "@/lib/whatsNew";
 
 const STEP = 240; // photos rendered per scroll step
 export function YearView({
@@ -23,6 +25,7 @@ export function YearView({
   const [viewing, setViewing] = useState<number | null>(null);
   const { markOpened, close } = useOverlay(viewing !== null, () => setViewing(null));
   const sentinel = useRef<HTMLDivElement>(null);
+  const since = useSince(); // previous visit: photos added after it get a "new" label
 
   // Render more photos as the visitor scrolls down.
   useEffect(() => {
@@ -62,8 +65,9 @@ export function YearView({
               type="button"
               onClick={() => open(index)}
               aria-label={`תמונה ${index + 1}`}
-              className="block aspect-square w-full overflow-hidden rounded-md bg-sun/20 sm:rounded-lg"
+              className="relative block aspect-square w-full overflow-hidden rounded-md bg-sun/20 sm:rounded-lg"
             >
+              {since !== null && photo.a && photo.a > since && <NewLabel className="right-1 top-1 z-[1]" />}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={`/api/photo/${photo.id}/thumb`}

@@ -19,6 +19,7 @@ export type Photo = {
   h: number | null;
   t: string | null; // local date-time the photo was taken
   pp?: string[]; // ids of the named people in the photo
+  a?: number; // when it was added to Immich, in seconds since 1970 (for "new" labels)
 };
 
 export type PersonSummary = { id: string; name: string; count: number; coverId: string };
@@ -55,6 +56,7 @@ type SearchItem = {
   localDateTime?: string | null;
   fileCreatedAt?: string | null;
   fileModifiedAt?: string | null;
+  createdAt?: string | null; // when Immich added it
   originalFileName?: string | null;
   isTrashed?: boolean;
   isFavorite?: boolean;
@@ -186,6 +188,7 @@ const getFolderData = unstable_cache(
           file: item.originalFileName ?? "",
           fav: Boolean(item.isFavorite),
           ...(pp.length > 0 ? { pp } : {}),
+          ...(item.createdAt ? { a: Math.floor(Date.parse(item.createdAt) / 1000) || undefined } : {}),
         });
       }
       const next: number = res.assets.nextPage ? Number(res.assets.nextPage) : NaN;
@@ -193,7 +196,7 @@ const getFolderData = unstable_cache(
     }
     return { photos, names: [...names.entries()] };
   },
-  ["immich-folder-data-v9"],
+  ["immich-folder-data-v10"],
   { revalidate: HOUR, tags: [IMMICH_CACHE_TAG] },
 );
 
@@ -219,7 +222,26 @@ function photoYear(p: CatalogPhoto) {
   return y && /^\d{4}$/.test(y) ? y : p.folder;
 }
 
-const strip = ({ id, w, h, t, pp }: CatalogPhoto): Photo => ({ id, w, h, t, ...(pp ? { pp } : {}) });
+const strip = ({ id, w, h, t, pp, a }: CatalogPhoto): Photo => ({ id, w, h, t, ...(pp ? { pp } : {}), ...(a ? { a } : {}) });
+
+/**
+ * Photos added to Immich in the last few months, grouped by minute and year:
+ * [minute (seconds since 1970), year, how many]. Small enough to send to every visitor,
+ * who then counts what was added since their last visit.
+ */
+export async function getRecentAdditions(days = 120): Promise<[number, string, number][]> {
+  const from = Math.floor(Date.now() / 1000) - days * 86400;
+  const buckets = new Map<string, number>();
+  for (const p of await getCatalog()) {
+    if (!p.a || p.a < from) continue;
+    const key = `${Math.floor(p.a / 60) * 60}|${photoYear(p)}`;
+    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+  }
+  return [...buckets.entries()].map(([k, n]) => {
+    const [m, y] = k.split("|");
+    return [Number(m), y, n] as [number, string, number];
+  });
+}
 
 /** Days since 1970 in Israel time, so the chosen cover changes once a day at midnight. */
 function dayNumber() {

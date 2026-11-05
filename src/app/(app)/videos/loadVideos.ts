@@ -28,13 +28,19 @@ export const loadVideos = cache(async () => {
     }),
   );
 
-  const seen = new Set<string>();
+  const byId = new Map<string, Video>();
   const all: Video[] = [];
   for (const r of results) {
     for (const v of r.videos) {
-      if (seen.has(v.id)) continue; // same video in two playlists
-      seen.add(v.id);
-      all.push({ ...v, youtubeTitle: v.title, title: displayTitles.get(v.id) ?? v.title });
+      const seen = byId.get(v.id);
+      if (seen) {
+        // Same video in two playlists: it counts as added the first time.
+        if (v.addedAt && (!seen.addedAt || v.addedAt < seen.addedAt)) seen.addedAt = v.addedAt;
+        continue;
+      }
+      const video = { ...v, youtubeTitle: v.title, title: displayTitles.get(v.id) ?? v.title };
+      byId.set(v.id, video);
+      all.push(video);
     }
   }
 

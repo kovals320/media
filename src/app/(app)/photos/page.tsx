@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
 import { getPeople, getUnnamedPeople, getYears, type PersonSummary, type YearSummary } from "@/lib/immich";
 import { PeopleRow } from "./PeopleRow";
+import { NewInYear } from "@/components/WhatsNew";
 
 export const metadata = { title: "תמונות – המדיה של המשפחה" };
 
@@ -75,6 +76,7 @@ export default async function PhotosPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={`/api/photo/${y.coverId}/thumb`} alt="" loading="lazy" className="h-full w-full object-cover" />
                     )}
+                    <NewInYear year={y.year} />
                   </div>
                 </div>
                 <p className="mt-3 font-display text-2xl leading-none">{y.year}</p>

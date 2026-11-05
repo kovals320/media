@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { getYears } from "@/lib/immich";
 import { AdminLinks } from "@/components/AdminLinks";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { WhatsNewStrip } from "@/components/WhatsNew";
 import { loadVideos } from "./videos/loadVideos";
 
 // Totals next to each tile; they follow the same caches as the pages
@@ -43,6 +44,7 @@ export default async function Home() {
         <AdminLinks />
       </div>
 
+      <WhatsNewStrip />
 
       <nav
         aria-label="בחירת סוג מדיה"

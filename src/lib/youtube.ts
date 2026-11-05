@@ -13,6 +13,7 @@ export type Video = {
   youtubeTitle?: string; // the title on YouTube
   thumbnail: string;
   publishedAt: string | null;
+  addedAt?: string | null; // when it was added to the playlist (for "new" labels)
   duration: string | null; // e.g. "4:07" or "1:02:15"
 };
 
@@ -53,7 +54,7 @@ function formatDuration(iso: string | undefined) {
 type PlaylistItemsResponse = {
   nextPageToken?: string;
   items: {
-    snippet: { title: string; thumbnails?: Thumbs; resourceId: { videoId: string } };
+    snippet: { title: string; publishedAt?: string; thumbnails?: Thumbs; resourceId: { videoId: string } };
     contentDetails?: { videoPublishedAt?: string };
     status?: { privacyStatus?: string };
   }[];
@@ -83,6 +84,7 @@ export async function getPlaylistVideos(playlistId: string): Promise<Video[]> {
         title: item.snippet.title,
         thumbnail: bestThumb(item.snippet.thumbnails, id),
         publishedAt: item.contentDetails?.videoPublishedAt ?? null,
+        addedAt: item.snippet.publishedAt ?? null,
         duration: null,
       });
     }
