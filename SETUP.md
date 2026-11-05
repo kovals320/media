@@ -190,12 +190,21 @@ rm -f "$LIST"
 
 **Backup** to an external disk (NTFS, mounted at `/mnt/backup`, into its own folder only):
 ```bash
-sudo mkdir -p /mnt/backup && sudo mount /dev/sda1 /mnt/backup
-sudo mkdir -p /mnt/backup/family-media-backup/immich-app
-sudo rsync -rt --info=progress2 /home/dor/Pictures /home/dor/Pictures-hidden /mnt/backup/family-media-backup/
-sudo cp ~/immich-app/docker-compose.yml ~/immich-app/.env /mnt/backup/family-media-backup/immich-app/
-sudo cp ~/hide-deleted.sh /mnt/backup/family-media-backup/
+sudo mkdir -p /mnt/backup
+mountpoint -q /mnt/backup || sudo mount /dev/sda1 /mnt/backup   # check `lsblk` if sda1 is missing
+B=/mnt/backup/family-media-backup
+# Dry run first: deletions in the backup's Pictures must all exist in Pictures-hidden.
+sudo rsync -rt --delete --dry-run --itemize-changes /home/dor/Pictures /home/dor/Pictures-hidden $B/ > /tmp/backup-plan.txt
+# Real run: the backup mirrors the server (deleted photos stay in Pictures-hidden).
+sudo rsync -rt --delete --info=progress2 /home/dor/Pictures /home/dor/Pictures-hidden $B/
+sudo mkdir -p $B/immich-app $B/immich-db-backups
+sudo cp ~/immich-app/docker-compose.yml ~/immich-app/docker-compose.override.yml ~/immich-app/.env $B/immich-app/
+sudo cp ~/hide-deleted.sh $B/
+# Immich's nightly database dumps (face names, merges, etc.) from UPLOAD_LOCATION/backups.
+sudo rsync -rt /home/dor/immich-data/backups/ $B/immich-db-backups/
+sync && sudo umount /mnt/backup
 ```
+Last backup: Nov 5, 2026 (552 GB used of 932 GB on the disk).
 
 ## 8. Cloning this project for another family / domain
 
