@@ -329,3 +329,10 @@ alter table public.media_face_suggestions add constraint media_face_suggestions_
 create unique index media_face_suggestions_pending_person_uniq
   on public.media_face_suggestions (person_id, lower(btrim(name))) where status = 'pending' and face_id is null;
 ```
+
+## 17. "New since your last visit"
+
+- Each phone stores its last visit in localStorage (`media-last-visit`); a visit lasts until the tab/app is closed (`media-visit-since` in sessionStorage). First-ever visit shows nothing.
+- `/api/whats-new` (cached 10 min) returns photos added to Immich in the last 120 days, grouped by minute and year (Immich `createdAt` = when the file was added), and films by the date they were added to a playlist (YouTube `snippet.publishedAt` of the playlist item).
+- Shown as: a strip on the home page ("מאז הביקור הקודם נוספו: …"), a badge on year tiles, and a "חדש" label on new photos and films.
+- Note: a file moved out and back into the photos folder counts as newly added after the rescan.
