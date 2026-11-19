@@ -288,6 +288,7 @@ sudo docker image prune -f
 Check: `https://photos.<domain>/api/server/version` and `https://<site>/api/health`.
 Before upgrading Immich across a major version, read its release notes for breaking changes.
 Oct 27, 2026: Immich v3.3.3 → v3.3.5 (CA compromise fix), cloudflared 2026.10.1 → 2026.10.3, apt upgrade, no reboot needed.
+Nov 19, 2026: Immich v3.3.5 → v3.4.1 (download was slow, ~1.5 h; run `up -d` separately if sudo times out). App APIs checked against the v3.4.1 spec.
 
 ## 15. Face tagging by visitors (suggestions the admin approves)
 
